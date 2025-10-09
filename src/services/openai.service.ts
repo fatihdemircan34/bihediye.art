@@ -38,7 +38,7 @@ export class OpenAIService {
     try {
       const prompt = this.buildLyricsPrompt(request);
 
-      const response = await this.client.post('/chat/completions', {
+      const requestBody: any = {
         model: this.model,
         messages: [
           {
@@ -52,9 +52,15 @@ export class OpenAIService {
             content: prompt,
           },
         ],
-        temperature: 0.8,
-        max_tokens: 1000,
-      });
+        max_completion_tokens: 1000,
+      };
+
+      // Only add temperature for models that support it (not gpt-5)
+      if (!this.model.includes('gpt-5')) {
+        requestBody.temperature = 0.8;
+      }
+
+      const response = await this.client.post('/chat/completions', requestBody);
 
       const lyrics = response.data.choices[0]?.message?.content?.trim();
 
@@ -133,7 +139,7 @@ export class OpenAIService {
    */
   async refineLyrics(lyrics: string, feedback: string): Promise<string> {
     try {
-      const response = await this.client.post('/chat/completions', {
+      const requestBody: any = {
         model: this.model,
         messages: [
           {
@@ -145,9 +151,15 @@ export class OpenAIService {
             content: `Aşağıdaki şarkı sözlerini şu geri bildirimlere göre düzenle:\n\n**Şarkı Sözleri:**\n${lyrics}\n\n**Geri Bildirim:**\n${feedback}`,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+        max_completion_tokens: 1000,
+      };
+
+      // Only add temperature for models that support it (not gpt-5)
+      if (!this.model.includes('gpt-5')) {
+        requestBody.temperature = 0.7;
+      }
+
+      const response = await this.client.post('/chat/completions', requestBody);
 
       const refinedLyrics = response.data.choices[0]?.message?.content?.trim();
 
@@ -167,7 +179,7 @@ export class OpenAIService {
    */
   async generateVideoPrompt(story: string, songType: string): Promise<string> {
     try {
-      const response = await this.client.post('/chat/completions', {
+      const requestBody: any = {
         model: this.model,
         messages: [
           {
@@ -179,9 +191,15 @@ export class OpenAIService {
             content: `Aşağıdaki hikaye ve müzik türü için bir video oluşturma prompt'u yaz (maksimum 100 kelime, İngilizce):\n\nMüzik Türü: ${songType}\n\nHikaye: ${story}`,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 200,
-      });
+        max_completion_tokens: 200,
+      };
+
+      // Only add temperature for models that support it (not gpt-5)
+      if (!this.model.includes('gpt-5')) {
+        requestBody.temperature = 0.7;
+      }
+
+      const response = await this.client.post('/chat/completions', requestBody);
 
       const prompt = response.data.choices[0]?.message?.content?.trim();
 
