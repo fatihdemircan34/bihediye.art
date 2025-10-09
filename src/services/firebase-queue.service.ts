@@ -111,10 +111,11 @@ export class FirebaseQueueService {
     const db = this.firebaseService.getDb();
 
     // Get next pending job (oldest first)
+    // NOTE: Removed orderBy to avoid composite index requirement
+    // Jobs are processed in the order they are returned (fast enough for our use case)
     const snapshot = await db
       .collection(this.COLLECTION)
       .where('status', '==', 'pending')
-      .orderBy('createdAt', 'asc')
       .limit(1)
       .get();
 
@@ -368,37 +369,47 @@ export class FirebaseQueueService {
 
   /**
    * Clean up old jobs
+   * NOTE: Uses simple queries to avoid composite index requirements
    */
   async cleanup(): Promise<void> {
     const db = this.firebaseService.getDb();
+    const batch = db.batch();
+    let deleteCount = 0;
 
     // Delete completed jobs older than 1 hour
-    const oneHourAgo = new Date(Date.now() - 3600000);
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
     const completedSnapshot = await db
       .collection(this.COLLECTION)
       .where('status', '==', 'completed')
-      .where('completedAt', '<', oneHourAgo.toISOString())
       .get();
 
-    const batch = db.batch();
     completedSnapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
+      const data = doc.data();
+      if (data.completedAt && data.completedAt < oneHourAgo) {
+        batch.delete(doc.ref);
+        deleteCount++;
+      }
     });
 
     // Delete failed jobs older than 24 hours
-    const oneDayAgo = new Date(Date.now() - 86400000);
+    const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
     const failedSnapshot = await db
       .collection(this.COLLECTION)
       .where('status', '==', 'failed')
-      .where('updatedAt', '<', oneDayAgo.toISOString())
       .get();
 
     failedSnapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
+      const data = doc.data();
+      if (data.updatedAt && data.updatedAt < oneDayAgo) {
+        batch.delete(doc.ref);
+        deleteCount++;
+      }
     });
 
-    await batch.commit();
-    console.log(`🗑️ Cleaned up ${completedSnapshot.size + failedSnapshot.size} old jobs`);
+    if (deleteCount > 0) {
+      await batch.commit();
+      console.log(`🗑️ Cleaned up ${deleteCount} old jobs`);
+    }
   }
 
   /**
