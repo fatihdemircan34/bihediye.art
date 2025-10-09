@@ -45,7 +45,17 @@ export class OpenAIService {
             role: 'system',
             content: `Sen profesyonel bir şarkı sözü yazarısın. Duygusal, anlamlı ve müzikal şarkı sözleri yazıyorsun.
             Şarkı sözleri kişiye özel olmalı, samimi ve içten olmalı. Türkçe dilbilgisi kurallarına dikkat et.
-            Şarkı sözlerini verse-chorus-verse-chorus-bridge-chorus yapısında oluştur.
+
+            ÖNEMLI FORMAT KURALI:
+            Şarkı sözlerini MUTLAKA şu etiketlerle formatla:
+            [intro] - Giriş kısmı
+            [verse] - Kıta
+            [pre-chorus] - Ön nakarat
+            [chorus] - Nakarat
+            [bridge] - Köprü
+            [outro] - Çıkış
+
+            Her satır kısa ve şarkı söylenebilir olmalı. Uzun cümleler YASAK.
             Şarkı EN AZ 2 dakika uzunluğunda olmalı, yeterince uzun ve detaylı şarkı sözleri yaz.`,
           },
           {
@@ -130,25 +140,35 @@ export class OpenAIService {
 
     // Talimatlar
     parts.push(`\n**Şarkı Yapısı (EN AZ 2 DAKİKALIK ŞARKI):**`);
-    parts.push(`- Intro (2-3 satır)`);
-    parts.push(`- Verse 1 (8-10 satır)`);
-    parts.push(`- Pre-Chorus (3-4 satır)`);
-    parts.push(`- Chorus/Nakarat (6-8 satır)`);
-    parts.push(`- Verse 2 (8-10 satır)`);
-    parts.push(`- Pre-Chorus (3-4 satır - tekrar)`);
-    parts.push(`- Chorus/Nakarat (6-8 satır - tekrar)`);
-    parts.push(`- Bridge/Köprü (6-8 satır)`);
-    parts.push(`- Final Chorus (6-8 satır - güçlü final)`);
-    parts.push(`- Outro (2-3 satır)`);
+    parts.push(`\n[intro]`);
+    parts.push(`2-3 satır giriş`);
+    parts.push(`\n[verse]`);
+    parts.push(`8-10 satır, kısa cümleler`);
+    parts.push(`\n[pre-chorus]`);
+    parts.push(`3-4 satır`);
+    parts.push(`\n[chorus]`);
+    parts.push(`6-8 satır nakarat`);
+    parts.push(`\n[verse]`);
+    parts.push(`8-10 satır ikinci kıta`);
+    parts.push(`\n[pre-chorus]`);
+    parts.push(`3-4 satır (tekrar)`);
+    parts.push(`\n[chorus]`);
+    parts.push(`6-8 satır nakarat (tekrar)`);
+    parts.push(`\n[bridge]`);
+    parts.push(`6-8 satır köprü`);
+    parts.push(`\n[chorus]`);
+    parts.push(`6-8 satır final nakarat`);
+    parts.push(`\n[outro]`);
+    parts.push(`2-3 satır çıkış`);
 
-    parts.push(`\n**Önemli Kurallar:**`);
-    parts.push(`1. Samimi, duygusal ve kişiye özel olmalı`);
-    parts.push(`2. Türkçe dilbilgisi ve kafiye kurallarına dikkat et`);
-    parts.push(`3. Hikayeden ilham al ama birebir kopyalama`);
-    parts.push(`4. ${request.songDetails.style} bir atmosfer oluştur`);
-    parts.push(`5. Şarkı ${request.songDetails.type} türüne uygun olmalı`);
-    parts.push(`6. TOPLAM EN AZ 60-70 SATIR OLMALI (2+ dakikalık şarkı için)`);
-    parts.push(`7. Her bölüm yeterince anlamlı ve akıcı olmalı`);
+    parts.push(`\n**ZORUNLU FORMAT KURALLARI:**`);
+    parts.push(`1. Her bölüm MUTLAKA etiketle başlamalı: [intro], [verse], [chorus], vb.`);
+    parts.push(`2. Her satır kısa olmalı (maksimum 10-12 kelime)`);
+    parts.push(`3. Samimi, duygusal ve kişiye özel olmalı`);
+    parts.push(`4. Türkçe dilbilgisi ve kafiye kurallarına dikkat et`);
+    parts.push(`5. ${request.songDetails.style} bir atmosfer oluştur`);
+    parts.push(`6. Şarkı ${request.songDetails.type} türüne uygun olmalı`);
+    parts.push(`7. TOPLAM EN AZ 60-70 SATIR OLMALI (2+ dakikalık şarkı için)`);
 
     return parts.join('\n');
   }

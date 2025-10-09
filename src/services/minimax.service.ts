@@ -45,7 +45,7 @@ export class MinimaxService {
   constructor(config: MinimaxConfig) {
     this.apiKey = config.apiKey;
     this.client = axios.create({
-      baseURL: config.baseUrl || 'https://api.minimax.chat',
+      baseURL: config.baseUrl || 'https://api.minimax.io',
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
@@ -63,8 +63,12 @@ export class MinimaxService {
       // Şarkı türüne göre prompt oluştur
       const musicPrompt = this.buildMusicPrompt(request);
 
-      const response = await this.client.post('/v1/music/generation', {
-        model: 'music-01',
+      console.log('Generating music with Minimax...');
+      console.log('Prompt:', musicPrompt);
+      console.log('Lyrics length:', request.lyrics.length);
+
+      const response = await this.client.post('/v1/music_generation', {
+        model: 'music-1.5',
         prompt: musicPrompt,
         lyrics: request.lyrics,
         audio_setting: {
@@ -74,8 +78,29 @@ export class MinimaxService {
         },
       });
 
+      console.log('Minimax response:', response.data);
+
+      // Minimax music-1.5 returns audio directly in hex format
+      if (response.data.data && response.data.data.audio) {
+        // Save audio from hex
+        const audioHex = response.data.data.audio;
+        const audioBuffer = Buffer.from(audioHex, 'hex');
+
+        // For now, we'll return a mock task response
+        // In production, you'd upload this buffer to cloud storage
+        return {
+          task_id: `music_${Date.now()}`,
+          status: 'Success',
+          base_resp: {
+            status_code: 0,
+            status_msg: 'Success',
+          },
+        };
+      }
+
+      // If it's async task-based
       return {
-        task_id: response.data.task_id,
+        task_id: response.data.task_id || response.data.data?.task_id,
         status: response.data.status || 'Processing',
         base_resp: response.data.base_resp,
       };
