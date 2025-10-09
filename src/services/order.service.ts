@@ -544,11 +544,8 @@ Onaylıyor musunuz?
    */
   private async deliverOrder(order: Order): Promise<void> {
     if (order.song1AudioUrl) {
+      // Send audio link (sendAudioMessage already includes nice message)
       await this.whatsappService.sendAudioMessage(order.whatsappPhone, order.song1AudioUrl);
-      await this.whatsappService.sendTextMessage(
-        order.whatsappPhone,
-        `🎵 *Özel Şarkınız Hazır!*\n\n${order.orderData.song1.type} - ${order.orderData.song1.style}\n🎤 ${order.orderData.song1.vocal} Vokal\n⏱️ 2+ dakika\n\n🎁 Hediye edeceğiniz kişiye güzel anlar dileriz!`
-      );
     }
 
     if (order.videoUrl) {

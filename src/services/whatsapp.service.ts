@@ -78,28 +78,21 @@ export class WhatsAppService {
   }
 
   /**
-   * Send an audio file
+   * Send an audio file (as text message with link)
    */
   async sendAudioMessage(to: string, audioUrl: string): Promise<void> {
     try {
-      const payload: BirdMessage = {
-        receiver: {
-          contacts: [
-            {
-              identifierValue: this.formatPhoneNumber(to),
-              identifierKey: 'phonenumber',
-            },
-          ],
-        },
-        body: {
-          type: 'file',
-          file: {
-            url: audioUrl,
-          },
-        },
-      };
+      // Bird.com WhatsApp doesn't support file URL directly
+      // Send as text message with clickable link
+      const message = `🎵 *Özel Şarkınız Hazır!*
 
-      await this.sendMessage(payload);
+Şarkınızı dinlemek için aşağıdaki linke tıklayın:
+
+${audioUrl}
+
+🎁 Hediye edeceğiniz kişiye güzel anlar dileriz!`;
+
+      await this.sendTextMessage(to, message);
     } catch (error: any) {
       console.error('Error sending audio message:', error.response?.data || error.message);
       throw new Error(`WhatsApp ses gönderme hatası: ${error.message}`);
