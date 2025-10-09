@@ -15,15 +15,17 @@ export interface BirdMessage {
     }>;
   };
   body: {
-    type: 'text' | 'media' | 'hsm';
+    type: 'text' | 'file' | 'image' | 'hsm';
     text?: {
       text: string;
     };
-    media?: {
+    file?: {
       url: string;
-      mediaType?: 'image' | 'audio' | 'video' | 'document';
+      fileName: string;
+    };
+    image?: {
+      url: string;
       caption?: string;
-      fileName?: string;
     };
   };
 }
@@ -91,10 +93,10 @@ export class WhatsAppService {
           ],
         },
         body: {
-          type: 'media',
-          media: {
+          type: 'file',
+          file: {
             url: audioUrl,
-            mediaType: 'audio',
+            fileName: 'sarki.mp3',
           },
         },
       };
@@ -121,16 +123,20 @@ export class WhatsAppService {
           ],
         },
         body: {
-          type: 'media',
-          media: {
+          type: 'file',
+          file: {
             url: videoUrl,
-            mediaType: 'video',
-            caption: caption,
+            fileName: 'video.mp4',
           },
         },
       };
 
       await this.sendMessage(payload);
+
+      // Send caption as separate message if provided
+      if (caption) {
+        await this.sendTextMessage(to, caption);
+      }
     } catch (error: any) {
       console.error('Error sending video message:', error.response?.data || error.message);
       throw new Error(`WhatsApp video gönderme hatası: ${error.message}`);
@@ -152,10 +158,9 @@ export class WhatsAppService {
           ],
         },
         body: {
-          type: 'media',
-          media: {
+          type: 'image',
+          image: {
             url: imageUrl,
-            mediaType: 'image',
             caption: caption,
           },
         },
@@ -183,10 +188,9 @@ export class WhatsAppService {
           ],
         },
         body: {
-          type: 'media',
-          media: {
+          type: 'file',
+          file: {
             url: documentUrl,
-            mediaType: 'document',
             fileName: filename,
           },
         },

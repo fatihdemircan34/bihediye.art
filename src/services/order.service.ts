@@ -114,7 +114,7 @@ Yapay zeka ile kişiye özel şarkı hediyesi oluşturuyoruz.
 🎵 1 Özel Şarkı (2+ dakika)
 💰 Fiyat: 350 TL
 
-Başlamak için *Şarkının Türünü* seçin:
+*Şarkının Türünü* seçin:
 
 1️⃣ Pop
 2️⃣ Rap
@@ -123,9 +123,7 @@ Başlamak için *Şarkının Türünü* seçin:
 5️⃣ Klasik
 6️⃣ Rock
 7️⃣ Metal
-8️⃣ Nostaljik
-
-Numara yazarak seçim yapın (örn: 1)`
+8️⃣ Nostaljik`
         );
         conversation.step = 'song1_type';
         break;
@@ -139,9 +137,9 @@ Numara yazarak seçim yapın (örn: 1)`
         conversation.data.song1 = { type: song1Type } as any;
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ 1. Şarkı: ${song1Type}
+          `✅ Şarkı Türü: ${song1Type}
 
-Şimdi *1. Şarkının Tarzını* seçin:
+*Şarkının Tarzını* seçin:
 
 1️⃣ Romantik
 2️⃣ Duygusal
@@ -162,7 +160,7 @@ Numara yazarak seçim yapın (örn: 1)`
           from,
           `✅ Tarz: ${song1Style}
 
-*1. Şarkının Vokal Seçimi:*
+*Vokal Seçimi:*
 
 1️⃣ Kadın
 2️⃣ Erkek
@@ -441,10 +439,9 @@ Onaylıyor musunuz?
       order.song1Lyrics = song1Lyrics;
       await this.firebaseService.updateOrder(orderId, { song1Lyrics });
 
-      // Generate music using queue (async) or direct (sync)
+      // Generate music using queue (async) - NO progress update here, queue handles it
       order.status = 'music_generating';
       await this.firebaseService.updateOrder(orderId, { status: 'music_generating' });
-      await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler oluşturuluyor...', 40);
 
       if (this.queueService) {
         // Use async queue for better performance under load

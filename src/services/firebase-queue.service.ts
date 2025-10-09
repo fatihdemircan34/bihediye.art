@@ -74,13 +74,8 @@ export class FirebaseQueueService {
       updatedAt: new Date().toISOString(),
     });
 
-    // Notify user
-    await this.whatsappService.sendProgressUpdate(
-      jobData.phoneNumber,
-      jobData.orderId,
-      `Şarkı ${jobData.songIndex} hazırlanmaya başlandı...`,
-      jobData.songIndex === 1 ? 25 : 75
-    );
+    // NO user notification here - will be sent when processing starts
+    console.log(`✅ Job added to queue: ${job.id}`);
 
     return job;
   }
@@ -162,15 +157,15 @@ export class FirebaseQueueService {
     const db = this.firebaseService.getDb();
 
     try {
-      // Update progress: 10%
+      // Update progress: Start music generation
       await this.updateJobProgress(job.id, 10);
 
-      // Send status update to user
+      // Send status update to user (25% - after lyrics 10%)
       await this.whatsappService.sendProgressUpdate(
         phoneNumber,
         orderId,
-        `Şarkı ${songIndex} için müzik oluşturuluyor...`,
-        songIndex === 1 ? 30 : 80
+        'Müzik oluşturuluyor...',
+        25
       );
 
       // Generate music using Minimax (sync mode - returns hex audio)
@@ -185,6 +180,14 @@ export class FirebaseQueueService {
       }
 
       await this.updateJobProgress(job.id, 50);
+
+      // Send progress update: Music generated, uploading to storage (50%)
+      await this.whatsappService.sendProgressUpdate(
+        phoneNumber,
+        orderId,
+        'Müzik oluşturuldu, yükleniyor...',
+        50
+      );
 
       // Convert data URL to buffer and upload to Firebase Storage
       console.log(`📤 Uploading audio to Firebase Storage...`);
@@ -221,7 +224,15 @@ export class FirebaseQueueService {
         status: 'completed',
       });
 
-      await this.updateJobProgress(job.id, 90);
+      await this.updateJobProgress(job.id, 80);
+
+      // Send progress update: Sending to WhatsApp (80%)
+      await this.whatsappService.sendProgressUpdate(
+        phoneNumber,
+        orderId,
+        'Şarkınız hazır, gönderiliyor...',
+        80
+      );
 
       // Send music file to user via WhatsApp (using Storage URL)
       console.log(`📤 Sending music file to user via WhatsApp...`);
@@ -229,7 +240,14 @@ export class FirebaseQueueService {
 
       await this.updateJobProgress(job.id, 100);
 
-      // Send completion message
+      // Send completion message (100%)
+      await this.whatsappService.sendProgressUpdate(
+        phoneNumber,
+        orderId,
+        'Tamamlandı! ✅',
+        100
+      );
+
       await this.whatsappService.sendOrderCompletion(phoneNumber, orderId);
 
       // Mark job as completed
