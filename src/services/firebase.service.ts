@@ -394,7 +394,7 @@ export class FirebaseService {
    * @param orderId - Order ID for organizing files
    * @param songIndex - Song index (1, 2, etc.)
    * @param audioBuffer - Audio file buffer
-   * @returns Public URL to the uploaded file
+   * @returns Public URL to the uploaded file (signed URL, valid for 7 days)
    */
   async uploadAudio(orderId: string, songIndex: number, audioBuffer: Buffer): Promise<string> {
     try {
@@ -404,7 +404,7 @@ export class FirebaseService {
       console.log(`📤 Uploading audio to Firebase Storage: ${filename}`);
       console.log(`   Size: ${(audioBuffer.length / 1024 / 1024).toFixed(2)} MB`);
 
-      // Upload buffer to Storage
+      // Upload buffer to Storage (without public: true - uniform bucket-level access)
       await file.save(audioBuffer, {
         metadata: {
           contentType: 'audio/mpeg',
@@ -414,17 +414,19 @@ export class FirebaseService {
             uploadedAt: new Date().toISOString(),
           },
         },
-        public: true, // Make file publicly accessible
         resumable: false, // Faster for small files
       });
 
-      // Get public URL
-      const publicUrl = `https://storage.googleapis.com/${this.bucket.name}/${filename}`;
+      // Generate signed URL (valid for 7 days)
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
 
       console.log(`✅ Audio uploaded successfully`);
-      console.log(`   URL: ${publicUrl}`);
+      console.log(`   URL: ${signedUrl.substring(0, 100)}...`);
 
-      return publicUrl;
+      return signedUrl;
     } catch (error: any) {
       console.error('❌ Error uploading audio to Storage:', error.message);
       throw new Error(`Firebase Storage yükleme hatası: ${error.message}`);
@@ -449,14 +451,17 @@ export class FirebaseService {
             uploadedAt: new Date().toISOString(),
           },
         },
-        public: true,
         resumable: false,
       });
 
-      const publicUrl = `https://storage.googleapis.com/${this.bucket.name}/${filename}`;
+      // Generate signed URL (valid for 7 days)
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
 
-      console.log(`✅ Video uploaded successfully: ${publicUrl}`);
-      return publicUrl;
+      console.log(`✅ Video uploaded successfully`);
+      return signedUrl;
     } catch (error: any) {
       console.error('Error uploading video to Storage:', error.message);
       throw new Error(`Firebase Storage video yükleme hatası: ${error.message}`);
