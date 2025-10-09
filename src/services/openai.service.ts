@@ -86,15 +86,25 @@ export class OpenAIService {
       const lyrics = response.data.choices?.[0]?.message?.content?.trim();
 
       if (!lyrics) {
-        console.error('Empty lyrics response. Full response:', JSON.stringify(response.data, null, 2));
+        console.error('❌ Empty lyrics response from OpenAI');
+        console.error('Full response:', JSON.stringify(response.data, null, 2));
         throw new Error('OpenAI boş yanıt döndürdü');
       }
 
-      console.log('Lyrics generated successfully, length:', lyrics.length);
+      console.log('✅ Lyrics generated successfully');
+      console.log('- Length:', lyrics.length, 'characters');
+      console.log('- Lines:', lyrics.split('\n').length);
+      console.log('- Has tags:', /\[verse\]|\[chorus\]|\[bridge\]/.test(lyrics));
+
       return lyrics;
     } catch (error: any) {
-      console.error('Error generating lyrics:', error.response?.data || error.message);
-      throw new Error(`Şarkı sözü oluşturma hatası: ${error.response?.data?.error?.message || error.message}`);
+      console.error('❌ OpenAI API Error Details:');
+      console.error('- Message:', error.message);
+      console.error('- Status:', error.response?.status);
+      console.error('- Data:', error.response?.data);
+
+      // User-friendly error message
+      throw new Error('Şarkı sözü oluşturma işlemi şu anda gerçekleştirilemiyor. Lütfen daha sonra tekrar deneyin.');
     }
   }
 

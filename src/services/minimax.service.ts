@@ -50,7 +50,7 @@ export class MinimaxService {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
       },
-      timeout: 30000,
+      timeout: 300000, // 5 dakika - müzik üretimi uzun sürebilir
     });
   }
 
@@ -71,6 +71,7 @@ export class MinimaxService {
         model: 'music-1.5',
         prompt: musicPrompt,
         lyrics: request.lyrics,
+        invoke_method: 'async-invoke', // Async task-based generation
         audio_setting: {
           sample_rate: 44100,
           bitrate: 256000,
@@ -78,16 +79,23 @@ export class MinimaxService {
         },
       });
 
-      console.log('Minimax response:', response.data);
+      console.log('✅ Minimax API response received');
+      console.log('Response structure:', {
+        hasData: !!response.data.data,
+        hasAudio: !!response.data.data?.audio,
+        hasTaskId: !!response.data.task_id,
+        dataKeys: response.data ? Object.keys(response.data) : []
+      });
 
-      // Minimax music-1.5 returns audio directly in hex format
+      // Minimax music-1.5 returns audio directly in hex format (synchronous)
       if (response.data.data && response.data.data.audio) {
-        // Save audio from hex
+        console.log('✅ Received audio data directly (sync response)');
         const audioHex = response.data.data.audio;
         const audioBuffer = Buffer.from(audioHex, 'hex');
+        console.log(`Audio size: ${audioBuffer.length} bytes`);
 
+        // TODO: Upload to cloud storage and return actual URL
         // For now, we'll return a mock task response
-        // In production, you'd upload this buffer to cloud storage
         return {
           task_id: `music_${Date.now()}`,
           status: 'Success',
@@ -98,15 +106,29 @@ export class MinimaxService {
         };
       }
 
-      // If it's async task-based
-      return {
-        task_id: response.data.task_id || response.data.data?.task_id,
-        status: response.data.status || 'Processing',
-        base_resp: response.data.base_resp,
-      };
+      // If it's async task-based (returns task_id for polling)
+      if (response.data.task_id || response.data.data?.task_id) {
+        const taskId = response.data.task_id || response.data.data.task_id;
+        console.log('✅ Received task ID (async response):', taskId);
+
+        return {
+          task_id: taskId,
+          status: response.data.status || 'Processing',
+          base_resp: response.data.base_resp,
+        };
+      }
+
+      console.error('❌ Unexpected Minimax response format:', JSON.stringify(response.data, null, 2));
+      throw new Error('Minimax beklenmeyen yanıt formatı döndürdü');
+
     } catch (error: any) {
-      console.error('Error generating music:', error.response?.data || error.message);
-      throw new Error(`Minimax müzik oluşturma hatası: ${error.response?.data?.base_resp?.status_msg || error.message}`);
+      console.error('❌ Minimax API Error Details:');
+      console.error('- Message:', error.message);
+      console.error('- Status:', error.response?.status);
+      console.error('- Response:', error.response?.data);
+
+      // User-friendly error message (no technical details)
+      throw new Error('Müzik oluşturma işlemi şu anda gerçekleştirilemiyor. Lütfen daha sonra tekrar deneyin.');
     }
   }
 
@@ -143,20 +165,37 @@ export class MinimaxService {
    */
   async checkTaskStatus(taskId: string): Promise<MinimaxTaskStatus> {
     try {
-      const response = await this.client.get('/v1/query/task_status', {
-        params: { task_id: taskId },
+      console.log(`⏳ Checking task status for: ${taskId}`);
+
+      const response = await this.client.get(`/v1/music_generation/query/${taskId}`);
+
+      console.log('Task status response:', {
+        taskId,
+        status: response.data.status,
+        hasAudio: !!response.data.data?.audio,
+        hasFileUrl: !!response.data.file_url
       });
 
+      // Check if completed and has audio
+      if (response.data.status === 'Success' && response.data.data?.audio) {
+        // Convert hex audio to base64 or URL
+        return {
+          task_id: taskId,
+          status: 'Success',
+          file_url: `data:audio/mp3;base64,${Buffer.from(response.data.data.audio, 'hex').toString('base64')}`,
+        };
+      }
+
       return {
-        task_id: response.data.task_id,
-        status: response.data.status,
+        task_id: taskId,
+        status: response.data.status || 'Processing',
         file_id: response.data.file_id,
         audio_file: response.data.audio_file,
         video_file: response.data.video_file,
         file_url: response.data.file_url,
       };
     } catch (error: any) {
-      console.error('Error checking task status:', error.response?.data || error.message);
+      console.error('❌ Error checking task status:', error.response?.data || error.message);
       throw new Error(`Task durum kontrolü hatası: ${error.message}`);
     }
   }
@@ -183,25 +222,36 @@ export class MinimaxService {
    */
   async waitForTaskCompletion(
     taskId: string,
-    maxAttempts: number = 60,
-    pollInterval: number = 5000
+    maxAttempts: number = 180, // 180 attempts = 15 minutes
+    pollInterval: number = 5000 // Poll every 5 seconds
   ): Promise<MinimaxTaskStatus> {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    console.log(`🔄 Starting task polling for: ${taskId}`);
+    console.log(`Max wait time: ${(maxAttempts * pollInterval) / 1000 / 60} minutes`);
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      console.log(`📊 Poll attempt ${attempt}/${maxAttempts}`);
+
       const status = await this.checkTaskStatus(taskId);
 
       if (status.status === 'Success') {
+        console.log(`✅ Task completed successfully: ${taskId}`);
         return status;
       }
 
       if (status.status === 'Failed') {
+        console.error(`❌ Task failed: ${taskId}`);
         throw new Error(`Task başarısız oldu: ${taskId}`);
       }
+
+      // Still processing
+      console.log(`⏳ Task still processing... (${status.status})`);
 
       // Wait before next poll
       await new Promise(resolve => setTimeout(resolve, pollInterval));
     }
 
-    throw new Error(`Task timeout: ${taskId} - ${maxAttempts * pollInterval / 1000} saniye içinde tamamlanamadı`);
+    console.error(`⏰ Task timeout: ${taskId}`);
+    throw new Error(`Task timeout: ${taskId} - ${(maxAttempts * pollInterval) / 1000 / 60} dakika içinde tamamlanamadı`);
   }
 
   /**

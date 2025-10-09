@@ -256,15 +256,19 @@ Hediyeniz için teşekkür ederiz! ❤️`;
   }
 
   /**
-   * Send error message
+   * Send error message (user-friendly, no technical details)
    */
   async sendErrorMessage(to: string, orderId: string, errorMessage: string): Promise<void> {
-    const message = `❌ *Sipariş Hatası*
+    const message = `⚠️ *Sipariş İşlemi*
 
 🎵 Sipariş No: ${orderId}
-⚠️ Hata: ${errorMessage}
 
-Lütfen müşteri hizmetleri ile iletişime geçin.`;
+Maalesef siparişiniz şu anda işlenemiyor.
+
+📞 Lütfen destek ekibimizle iletişime geçin:
+support@bihediye.art
+
+Anlayışınız için teşekkür ederiz.`;
 
     await this.sendTextMessage(to, message);
   }
