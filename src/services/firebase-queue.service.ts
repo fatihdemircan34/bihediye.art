@@ -227,18 +227,7 @@ export class FirebaseQueueService {
         });
       }
 
-      // Update order in Firebase with Storage URL
-      const order = await this.firebaseService.getOrder(orderId);
-      if (!order) {
-        throw new Error(`Order ${orderId} not found`);
-      }
-
-      // Save Storage URL to order
-      if (songIndex === 1) {
-        order.song1AudioUrl = storageUrl;
-      }
-
-      order.status = 'completed';
+      // Update order status to completed
       await this.firebaseService.updateOrder(orderId, {
         song1AudioUrl: storageUrl,
         status: 'completed',
