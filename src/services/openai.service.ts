@@ -130,16 +130,16 @@ export class OpenAIService {
 
     // Talimatlar
     parts.push(`\n**Şarkı Yapısı (EN AZ 2 DAKİKALIK ŞARKI):**`);
-    parts.push(`- Intro (2-4 satır)`);
-    parts.push(`- Verse 1 (12-16 satır)`);
-    parts.push(`- Pre-Chorus (4 satır)`);
-    parts.push(`- Chorus/Nakarat (8-10 satır)`);
-    parts.push(`- Verse 2 (12-16 satır)`);
-    parts.push(`- Pre-Chorus (4 satır - tekrar)`);
-    parts.push(`- Chorus/Nakarat (8-10 satır - tekrar)`);
-    parts.push(`- Bridge/Köprü (8-10 satır)`);
-    parts.push(`- Final Chorus (8-10 satır - güçlü final)`);
-    parts.push(`- Outro (2-4 satır)`);
+    parts.push(`- Intro (2-3 satır)`);
+    parts.push(`- Verse 1 (8-10 satır)`);
+    parts.push(`- Pre-Chorus (3-4 satır)`);
+    parts.push(`- Chorus/Nakarat (6-8 satır)`);
+    parts.push(`- Verse 2 (8-10 satır)`);
+    parts.push(`- Pre-Chorus (3-4 satır - tekrar)`);
+    parts.push(`- Chorus/Nakarat (6-8 satır - tekrar)`);
+    parts.push(`- Bridge/Köprü (6-8 satır)`);
+    parts.push(`- Final Chorus (6-8 satır - güçlü final)`);
+    parts.push(`- Outro (2-3 satır)`);
 
     parts.push(`\n**Önemli Kurallar:**`);
     parts.push(`1. Samimi, duygusal ve kişiye özel olmalı`);
@@ -147,8 +147,8 @@ export class OpenAIService {
     parts.push(`3. Hikayeden ilham al ama birebir kopyalama`);
     parts.push(`4. ${request.songDetails.style} bir atmosfer oluştur`);
     parts.push(`5. Şarkı ${request.songDetails.type} türüne uygun olmalı`);
-    parts.push(`6. TOPLAM EN AZ 80-100 SATIR OLMALI (2+ dakikalık şarkı için)`);
-    parts.push(`7. Her bölüm yeterince detaylı ve uzun olmalı`);
+    parts.push(`6. TOPLAM EN AZ 60-70 SATIR OLMALI (2+ dakikalık şarkı için)`);
+    parts.push(`7. Her bölüm yeterince anlamlı ve akıcı olmalı`);
 
     return parts.join('\n');
   }

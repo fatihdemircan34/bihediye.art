@@ -15,9 +15,6 @@ export interface ConversationState {
     | 'song1_type'
     | 'song1_style'
     | 'song1_vocal'
-    | 'song2_type'
-    | 'song2_style'
-    | 'song2_vocal'
     | 'recipient_relation'
     | 'name_in_song'
     | 'recipient_name'
@@ -109,14 +106,10 @@ export class OrderService {
 Yapay zeka ile kişiye özel şarkı hediyesi oluşturuyoruz.
 
 *Paket İçeriği:*
-🎵 2 Özel Şarkı
-💰 Fiyat: 299 TL
+🎵 1 Özel Şarkı (2+ dakika)
+💰 Fiyat: 350 TL
 
-*Ek Seçenekler:*
-📱 SoundCloud Platformu: +79 TL
-🎬 Video ile Teslim: +79 TL
-
-Başlamak için *1. Şarkının Türünü* seçin:
+Başlamak için *Şarkının Türünü* seçin:
 
 1️⃣ Pop
 2️⃣ Rap
@@ -182,73 +175,7 @@ Numara yazarak seçim yapın (örn: 1)`
         conversation.data.song1!.vocal = song1Vocal;
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ 1. Şarkı Tamamlandı! 🎵
-
-Şimdi *2. Şarkının Türünü* seçin:
-
-1️⃣ Pop
-2️⃣ Rap
-3️⃣ Jazz
-4️⃣ Arabesk
-5️⃣ Klasik
-6️⃣ Rock
-7️⃣ Metal
-8️⃣ Nostaljik`
-        );
-        conversation.step = 'song2_type';
-        break;
-
-      case 'song2_type':
-        const song2Type = this.parseMusicType(message);
-        if (!song2Type) {
-          await this.whatsappService.sendTextMessage(from, '❌ Geçersiz seçim. Lütfen 1-8 arası numara girin.');
-          return;
-        }
-        conversation.data.song2 = { type: song2Type } as any;
-        await this.whatsappService.sendTextMessage(
-          from,
-          `✅ 2. Şarkı: ${song2Type}
-
-*2. Şarkının Tarzı:*
-
-1️⃣ Romantik
-2️⃣ Duygusal
-3️⃣ Eğlenceli
-4️⃣ Sakin`
-        );
-        conversation.step = 'song2_style';
-        break;
-
-      case 'song2_style':
-        const song2Style = this.parseStyle(message);
-        if (!song2Style) {
-          await this.whatsappService.sendTextMessage(from, '❌ Geçersiz seçim. Lütfen 1-4 arası numara girin.');
-          return;
-        }
-        conversation.data.song2!.style = song2Style;
-        await this.whatsappService.sendTextMessage(
-          from,
-          `✅ Tarz: ${song2Style}
-
-*2. Şarkının Vokal Seçimi:*
-
-1️⃣ Kadın
-2️⃣ Erkek
-3️⃣ Fark etmez`
-        );
-        conversation.step = 'song2_vocal';
-        break;
-
-      case 'song2_vocal':
-        const song2Vocal = this.parseVocal(message);
-        if (!song2Vocal) {
-          await this.whatsappService.sendTextMessage(from, '❌ Geçersiz seçim. Lütfen 1-3 arası numara girin.');
-          return;
-        }
-        conversation.data.song2!.vocal = song2Vocal;
-        await this.whatsappService.sendTextMessage(
-          from,
-          `✅ 2. Şarkı Tamamlandı! 🎵
+          `✅ Şarkı Ayarları Tamamlandı! 🎵
 
 Şarkıyı *hediye edeceğiniz kişi sizin neyiniz?*
 
@@ -343,51 +270,13 @@ Yoksa "hayır" yazın.`
           }
           conversation.data.notes = message;
         }
-        await this.whatsappService.sendTextMessage(
-          from,
-          `*Teslimat Seçenekleri:*
-
-Hangi formatta teslim edelim?
-
-1️⃣ Sadece Ses Dosyası (299 TL)
-2️⃣ Ses + SoundCloud (378 TL)
-3️⃣ Ses + Video (378 TL)
-4️⃣ Ses + SoundCloud + Video (457 TL)
-
-Numara yazın:`
-        );
-        conversation.step = 'delivery_options';
-        break;
-
-      case 'delivery_options':
-        const deliveryOption = this.parseDeliveryOption(message);
-        if (!deliveryOption) {
-          await this.whatsappService.sendTextMessage(from, '❌ Geçersiz seçim. Lütfen 1-4 arası numara girin.');
-          return;
-        }
-        conversation.data.deliveryOptions = deliveryOption;
-
-        if (deliveryOption.video) {
-          await this.whatsappService.sendTextMessage(
-            from,
-            `✅ Teslimat seçimi alındı
-
-Video için *kapak fotoğrafı* gönderin:
-
-Fotoğrafı şimdi gönderin.`
-          );
-          conversation.step = 'cover_photo';
-        } else {
-          await this.sendOrderConfirmation(conversation);
-        }
-        break;
-
-      case 'cover_photo':
-        // Photo will be handled by media webhook
-        await this.whatsappService.sendTextMessage(
-          from,
-          '⏳ Fotoğraf bekleniyor... Lütfen fotoğrafı gönderin.'
-        );
+        // Directly set delivery options (audio only)
+        conversation.data.deliveryOptions = {
+          audioFile: true,
+          musicPlatform: false,
+          video: false
+        };
+        await this.sendOrderConfirmation(conversation);
         break;
 
       case 'confirm':
@@ -436,15 +325,11 @@ Fotoğrafı şimdi gönderin.`
 
     const summary = `📋 *Sipariş Özeti*
 
-*1. Şarkı:*
+*Şarkınız:*
 🎵 Tür: ${data.song1?.type}
 🎭 Tarz: ${data.song1?.style}
 🎤 Vokal: ${data.song1?.vocal || 'Fark etmez'}
-
-*2. Şarkı:*
-🎵 Tür: ${data.song2?.type}
-🎭 Tarz: ${data.song2?.style}
-🎤 Vokal: ${data.song2?.vocal || 'Fark etmez'}
+⏱️ Süre: 2+ dakika
 
 *Hediye Bilgileri:*
 👤 Kime: ${data.recipientRelation}
@@ -539,61 +424,36 @@ Onaylıyor musunuz?
       await this.firebaseService.updateOrder(orderId, { status: 'lyrics_generating' });
       await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Şarkı sözleri yazılıyor...', 10);
 
-      const [song1Lyrics, song2Lyrics] = await Promise.all([
-        this.openaiService.generateLyrics({
-          songDetails: order.orderData.song1,
-          story: order.orderData.story,
-          recipientName: order.orderData.recipientName,
-          recipientRelation: order.orderData.recipientRelation,
-          includeNameInSong: order.orderData.includeNameInSong,
-          notes: order.orderData.notes,
-        }),
-        this.openaiService.generateLyrics({
-          songDetails: order.orderData.song2,
-          story: order.orderData.story,
-          recipientName: order.orderData.recipientName,
-          recipientRelation: order.orderData.recipientRelation,
-          includeNameInSong: order.orderData.includeNameInSong,
-          notes: order.orderData.notes,
-        }),
-      ]);
+      const song1Lyrics = await this.openaiService.generateLyrics({
+        songDetails: order.orderData.song1,
+        story: order.orderData.story,
+        recipientName: order.orderData.recipientName,
+        recipientRelation: order.orderData.recipientRelation,
+        includeNameInSong: order.orderData.includeNameInSong,
+        notes: order.orderData.notes,
+      });
 
       order.song1Lyrics = song1Lyrics;
-      order.song2Lyrics = song2Lyrics;
-      await this.firebaseService.updateOrder(orderId, { song1Lyrics, song2Lyrics });
+      await this.firebaseService.updateOrder(orderId, { song1Lyrics });
 
       // Generate music
       order.status = 'music_generating';
       await this.firebaseService.updateOrder(orderId, { status: 'music_generating' });
       await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler oluşturuluyor...', 40);
 
-      const [song1Task, song2Task] = await Promise.all([
-        this.minimaxService.generateMusic({
-          lyrics: song1Lyrics,
-          songType: order.orderData.song1.type,
-          style: order.orderData.song1.style,
-          vocal: order.orderData.song1.vocal,
-        }),
-        this.minimaxService.generateMusic({
-          lyrics: song2Lyrics,
-          songType: order.orderData.song2.type,
-          style: order.orderData.song2.style,
-          vocal: order.orderData.song2.vocal,
-        }),
-      ]);
+      const song1Task = await this.minimaxService.generateMusic({
+        lyrics: song1Lyrics,
+        songType: order.orderData.song1.type,
+        style: order.orderData.song1.style,
+        vocal: order.orderData.song1.vocal,
+      });
 
-      const [song1Music, song2Music] = await Promise.all([
-        this.minimaxService.waitForTaskCompletion(song1Task.task_id),
-        this.minimaxService.waitForTaskCompletion(song2Task.task_id),
-      ]);
+      const song1Music = await this.minimaxService.waitForTaskCompletion(song1Task.task_id);
 
       order.song1AudioUrl = song1Music.file_url;
-      order.song2AudioUrl = song2Music.file_url;
       await this.firebaseService.updateOrder(orderId, {
         song1MusicTaskId: song1Task.task_id,
-        song2MusicTaskId: song2Task.task_id,
         song1AudioUrl: song1Music.file_url,
-        song2AudioUrl: song2Music.file_url,
       });
 
       await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler hazır!', 70);
@@ -663,15 +523,7 @@ Onaylıyor musunuz?
       await this.whatsappService.sendAudioMessage(order.whatsappPhone, order.song1AudioUrl);
       await this.whatsappService.sendTextMessage(
         order.whatsappPhone,
-        `🎵 *Şarkı 1*\n${order.orderData.song1.type} - ${order.orderData.song1.style}`
-      );
-    }
-
-    if (order.song2AudioUrl) {
-      await this.whatsappService.sendAudioMessage(order.whatsappPhone, order.song2AudioUrl);
-      await this.whatsappService.sendTextMessage(
-        order.whatsappPhone,
-        `🎵 *Şarkı 2*\n${order.orderData.song2.type} - ${order.orderData.song2.style}`
+        `🎵 *Özel Şarkınız Hazır!*\n\n${order.orderData.song1.type} - ${order.orderData.song1.style}\n🎤 ${order.orderData.song1.vocal} Vokal\n⏱️ 2+ dakika\n\n🎁 Hediye edeceğiniz kişiye güzel anlar dileriz!`
       );
     }
 
@@ -730,24 +582,18 @@ Onaylıyor musunuz?
    * Helper: Calculate price
    */
   private calculatePrice(options: any): number {
-    let price = 299;
-    if (options.musicPlatform) price += 79;
-    if (options.video) price += 79;
-    return price;
+    return 350; // Fixed price for 1 song (audio only)
   }
 
   /**
    * Helper: Calculate price details
    */
   private calculatePriceDetails(options: any): any {
-    const basePrice = 299;
-    let additionalCosts = 0;
-    if (options.musicPlatform) additionalCosts += 79;
-    if (options.video) additionalCosts += 79;
+    const basePrice = 350;
     return {
       basePrice,
-      additionalCosts,
-      totalPrice: basePrice + additionalCosts,
+      additionalCosts: 0,
+      totalPrice: basePrice,
     };
   }
 
