@@ -45,14 +45,15 @@ export class OpenAIService {
             role: 'system',
             content: `Sen profesyonel bir şarkı sözü yazarısın. Duygusal, anlamlı ve müzikal şarkı sözleri yazıyorsun.
             Şarkı sözleri kişiye özel olmalı, samimi ve içten olmalı. Türkçe dilbilgisi kurallarına dikkat et.
-            Şarkı sözlerini verse-chorus-verse-chorus-bridge-chorus yapısında oluştur.`,
+            Şarkı sözlerini verse-chorus-verse-chorus-bridge-chorus yapısında oluştur.
+            Şarkı EN AZ 2 dakika uzunluğunda olmalı, yeterince uzun ve detaylı şarkı sözleri yaz.`,
           },
           {
             role: 'user',
             content: prompt,
           },
         ],
-        max_completion_tokens: 1000,
+        max_completion_tokens: 2000,
       };
 
       // Only add temperature for models that support it (not gpt-5)
@@ -60,14 +61,26 @@ export class OpenAIService {
         requestBody.temperature = 0.8;
       }
 
+      console.log('Sending OpenAI request with model:', this.model);
+
       const response = await this.client.post('/chat/completions', requestBody);
 
-      const lyrics = response.data.choices[0]?.message?.content?.trim();
+      console.log('OpenAI response received:', {
+        model: response.data.model,
+        choices: response.data.choices?.length,
+        finishReason: response.data.choices?.[0]?.finish_reason,
+        hasContent: !!response.data.choices?.[0]?.message?.content,
+        contentLength: response.data.choices?.[0]?.message?.content?.length || 0,
+      });
+
+      const lyrics = response.data.choices?.[0]?.message?.content?.trim();
 
       if (!lyrics) {
+        console.error('Empty lyrics response. Full response:', JSON.stringify(response.data, null, 2));
         throw new Error('OpenAI boş yanıt döndürdü');
       }
 
+      console.log('Lyrics generated successfully, length:', lyrics.length);
       return lyrics;
     } catch (error: any) {
       console.error('Error generating lyrics:', error.response?.data || error.message);
@@ -116,13 +129,17 @@ export class OpenAIService {
     }
 
     // Talimatlar
-    parts.push(`\n**Şarkı Yapısı:**`);
-    parts.push(`- Verse 1 (8 satır)`);
-    parts.push(`- Chorus/Nakarat (4-6 satır)`);
-    parts.push(`- Verse 2 (8 satır)`);
-    parts.push(`- Chorus/Nakarat (tekrar)`);
-    parts.push(`- Bridge/Köprü (4 satır)`);
-    parts.push(`- Final Chorus (tekrar)`);
+    parts.push(`\n**Şarkı Yapısı (EN AZ 2 DAKİKALIK ŞARKI):**`);
+    parts.push(`- Intro (2-4 satır)`);
+    parts.push(`- Verse 1 (12-16 satır)`);
+    parts.push(`- Pre-Chorus (4 satır)`);
+    parts.push(`- Chorus/Nakarat (8-10 satır)`);
+    parts.push(`- Verse 2 (12-16 satır)`);
+    parts.push(`- Pre-Chorus (4 satır - tekrar)`);
+    parts.push(`- Chorus/Nakarat (8-10 satır - tekrar)`);
+    parts.push(`- Bridge/Köprü (8-10 satır)`);
+    parts.push(`- Final Chorus (8-10 satır - güçlü final)`);
+    parts.push(`- Outro (2-4 satır)`);
 
     parts.push(`\n**Önemli Kurallar:**`);
     parts.push(`1. Samimi, duygusal ve kişiye özel olmalı`);
@@ -130,6 +147,8 @@ export class OpenAIService {
     parts.push(`3. Hikayeden ilham al ama birebir kopyalama`);
     parts.push(`4. ${request.songDetails.style} bir atmosfer oluştur`);
     parts.push(`5. Şarkı ${request.songDetails.type} türüne uygun olmalı`);
+    parts.push(`6. TOPLAM EN AZ 80-100 SATIR OLMALI (2+ dakikalık şarkı için)`);
+    parts.push(`7. Her bölüm yeterince detaylı ve uzun olmalı`);
 
     return parts.join('\n');
   }
