@@ -71,7 +71,6 @@ export class MinimaxService {
         model: 'music-1.5',
         prompt: musicPrompt,
         lyrics: request.lyrics,
-        invoke_method: 'async-invoke', // Async task-based generation
         audio_setting: {
           sample_rate: 44100,
           bitrate: 256000,
@@ -80,25 +79,25 @@ export class MinimaxService {
       });
 
       console.log('✅ Minimax API response received');
-      console.log('Response structure:', {
-        hasData: !!response.data.data,
-        hasAudio: !!response.data.data?.audio,
-        hasTaskId: !!response.data.task_id,
-        dataKeys: response.data ? Object.keys(response.data) : []
-      });
 
       // Minimax music-1.5 returns audio directly in hex format (synchronous)
       if (response.data.data && response.data.data.audio) {
-        console.log('✅ Received audio data directly (sync response)');
         const audioHex = response.data.data.audio;
         const audioBuffer = Buffer.from(audioHex, 'hex');
-        console.log(`Audio size: ${audioBuffer.length} bytes`);
 
-        // TODO: Upload to cloud storage and return actual URL
-        // For now, we'll return a mock task response
+        console.log('✅ Music generated successfully!');
+        console.log(`   Audio size: ${(audioBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+        console.log(`   Format: MP3`);
+        console.log(`   Duration: ~${request.duration || 120} seconds`);
+
+        // Convert to base64 data URL (or upload to cloud storage in production)
+        const base64Audio = audioBuffer.toString('base64');
+        const dataUrl = `data:audio/mp3;base64,${base64Audio}`;
+
         return {
           task_id: `music_${Date.now()}`,
           status: 'Success',
+          file_url: dataUrl,
           base_resp: {
             status_code: 0,
             status_msg: 'Success',
@@ -106,19 +105,8 @@ export class MinimaxService {
         };
       }
 
-      // If it's async task-based (returns task_id for polling)
-      if (response.data.task_id || response.data.data?.task_id) {
-        const taskId = response.data.task_id || response.data.data.task_id;
-        console.log('✅ Received task ID (async response):', taskId);
-
-        return {
-          task_id: taskId,
-          status: response.data.status || 'Processing',
-          base_resp: response.data.base_resp,
-        };
-      }
-
-      console.error('❌ Unexpected Minimax response format:', JSON.stringify(response.data, null, 2));
+      console.error('❌ Unexpected Minimax response format');
+      console.error('Response keys:', Object.keys(response.data));
       throw new Error('Minimax beklenmeyen yanıt formatı döndürdü');
 
     } catch (error: any) {
@@ -219,39 +207,22 @@ export class MinimaxService {
 
   /**
    * Wait for task completion with polling
+   * NOTE: Minimax music-1.5 returns results synchronously, so this is just a mock
    */
   async waitForTaskCompletion(
     taskId: string,
-    maxAttempts: number = 180, // 180 attempts = 15 minutes
-    pollInterval: number = 5000 // Poll every 5 seconds
+    maxAttempts: number = 1,
+    pollInterval: number = 1000
   ): Promise<MinimaxTaskStatus> {
-    console.log(`🔄 Starting task polling for: ${taskId}`);
-    console.log(`Max wait time: ${(maxAttempts * pollInterval) / 1000 / 60} minutes`);
+    console.log(`✅ Task already completed (sync mode): ${taskId}`);
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      console.log(`📊 Poll attempt ${attempt}/${maxAttempts}`);
-
-      const status = await this.checkTaskStatus(taskId);
-
-      if (status.status === 'Success') {
-        console.log(`✅ Task completed successfully: ${taskId}`);
-        return status;
-      }
-
-      if (status.status === 'Failed') {
-        console.error(`❌ Task failed: ${taskId}`);
-        throw new Error(`Task başarısız oldu: ${taskId}`);
-      }
-
-      // Still processing
-      console.log(`⏳ Task still processing... (${status.status})`);
-
-      // Wait before next poll
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
-    }
-
-    console.error(`⏰ Task timeout: ${taskId}`);
-    throw new Error(`Task timeout: ${taskId} - ${(maxAttempts * pollInterval) / 1000 / 60} dakika içinde tamamlanamadı`);
+    // Minimax returns audio directly, no polling needed
+    // This method is kept for compatibility with existing code
+    return {
+      task_id: taskId,
+      status: 'Success',
+      file_url: '', // Already returned in generateMusic response
+    };
   }
 
   /**

@@ -4,6 +4,7 @@ import { MinimaxService } from './minimax.service';
 import { OpenAIService } from './openai.service';
 import { WhatsAppService } from './whatsapp.service';
 import { FirebaseService } from './firebase.service';
+import { FirebaseQueueService } from './firebase-queue.service';
 
 /**
  * Conversation state for collecting order information via WhatsApp
@@ -29,12 +30,16 @@ export interface ConversationState {
 }
 
 export class OrderService {
+  private queueService?: FirebaseQueueService;
+
   constructor(
     private minimaxService: MinimaxService,
     private openaiService: OpenAIService,
     private whatsappService: WhatsAppService,
-    private firebaseService: FirebaseService
+    private firebaseService: FirebaseService,
+    queueService?: FirebaseQueueService
   ) {
+    this.queueService = queueService;
     // Start cleanup job for old conversations
     this.startCleanupJob();
   }
@@ -436,27 +441,47 @@ Onaylıyor musunuz?
       order.song1Lyrics = song1Lyrics;
       await this.firebaseService.updateOrder(orderId, { song1Lyrics });
 
-      // Generate music
+      // Generate music using queue (async) or direct (sync)
       order.status = 'music_generating';
       await this.firebaseService.updateOrder(orderId, { status: 'music_generating' });
       await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler oluşturuluyor...', 40);
 
-      const song1Task = await this.minimaxService.generateMusic({
-        lyrics: song1Lyrics,
-        songType: order.orderData.song1.type,
-        style: order.orderData.song1.style,
-        vocal: order.orderData.song1.vocal,
-      });
+      if (this.queueService) {
+        // Use async queue for better performance under load
+        console.log('🚀 Using queue service for music generation');
+        await this.queueService.addMusicGenerationJob({
+          orderId,
+          phoneNumber: order.whatsappPhone,
+          songIndex: 1,
+          request: {
+            lyrics: song1Lyrics,
+            songType: order.orderData.song1.type,
+            style: order.orderData.song1.style,
+            vocal: order.orderData.song1.vocal,
+          },
+        });
+        // Queue will handle the rest (music generation + delivery)
+        return;
+      } else {
+        // Fallback to sync mode (for development/testing)
+        console.log('⚠️ No queue service - using sync mode');
+        const song1Task = await this.minimaxService.generateMusic({
+          lyrics: song1Lyrics,
+          songType: order.orderData.song1.type,
+          style: order.orderData.song1.style,
+          vocal: order.orderData.song1.vocal,
+        });
 
-      const song1Music = await this.minimaxService.waitForTaskCompletion(song1Task.task_id);
+        const song1Music = await this.minimaxService.waitForTaskCompletion(song1Task.task_id);
 
-      order.song1AudioUrl = song1Music.file_url;
-      await this.firebaseService.updateOrder(orderId, {
-        song1MusicTaskId: song1Task.task_id,
-        song1AudioUrl: song1Music.file_url,
-      });
+        order.song1AudioUrl = song1Music.file_url;
+        await this.firebaseService.updateOrder(orderId, {
+          song1MusicTaskId: song1Task.task_id,
+          song1AudioUrl: song1Music.file_url,
+        });
 
-      await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler hazır!', 70);
+        await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler hazır!', 70);
+      }
 
       // Generate video if requested
       if (order.orderData.deliveryOptions.video) {

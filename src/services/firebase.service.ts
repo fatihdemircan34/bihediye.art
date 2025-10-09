@@ -4,6 +4,8 @@ import { ConversationState } from './order.service';
 
 export class FirebaseService {
   private db: admin.firestore.Firestore;
+  private storage: admin.storage.Storage;
+  private bucket: admin.storage.Bucket;
 
   // Collection names with bihediye_ prefix
   private readonly COLLECTIONS = {
@@ -20,16 +22,21 @@ export class FirebaseService {
         const serviceAccount = require(serviceAccountPath);
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
+          storageBucket: 'voiceprocess-58fbc.firebasestorage.app',
         });
       } else {
         // Use default credentials or environment variable
         admin.initializeApp({
           credential: admin.credential.applicationDefault(),
+          storageBucket: 'voiceprocess-58fbc.firebasestorage.app',
         });
       }
 
       this.db = admin.firestore();
+      this.storage = admin.storage();
+      this.bucket = this.storage.bucket();
       console.log('✅ Firebase initialized successfully');
+      console.log('✅ Firebase Storage bucket:', this.bucket.name);
     } catch (error: any) {
       console.error('❌ Firebase initialization error:', error.message);
       throw error;
@@ -376,5 +383,111 @@ export class FirebaseService {
       console.error('Error batch saving orders:', error);
       throw error;
     }
+  }
+
+  /**
+   * FIREBASE STORAGE
+   */
+
+  /**
+   * Upload audio buffer to Firebase Storage
+   * @param orderId - Order ID for organizing files
+   * @param songIndex - Song index (1, 2, etc.)
+   * @param audioBuffer - Audio file buffer
+   * @returns Public URL to the uploaded file
+   */
+  async uploadAudio(orderId: string, songIndex: number, audioBuffer: Buffer): Promise<string> {
+    try {
+      const filename = `music/${orderId}/song${songIndex}_${Date.now()}.mp3`;
+      const file = this.bucket.file(filename);
+
+      console.log(`📤 Uploading audio to Firebase Storage: ${filename}`);
+      console.log(`   Size: ${(audioBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+
+      // Upload buffer to Storage
+      await file.save(audioBuffer, {
+        metadata: {
+          contentType: 'audio/mpeg',
+          metadata: {
+            orderId,
+            songIndex: songIndex.toString(),
+            uploadedAt: new Date().toISOString(),
+          },
+        },
+        public: true, // Make file publicly accessible
+        resumable: false, // Faster for small files
+      });
+
+      // Get public URL
+      const publicUrl = `https://storage.googleapis.com/${this.bucket.name}/${filename}`;
+
+      console.log(`✅ Audio uploaded successfully`);
+      console.log(`   URL: ${publicUrl}`);
+
+      return publicUrl;
+    } catch (error: any) {
+      console.error('❌ Error uploading audio to Storage:', error.message);
+      throw new Error(`Firebase Storage yükleme hatası: ${error.message}`);
+    }
+  }
+
+  /**
+   * Upload video buffer to Firebase Storage
+   */
+  async uploadVideo(orderId: string, videoBuffer: Buffer): Promise<string> {
+    try {
+      const filename = `videos/${orderId}/video_${Date.now()}.mp4`;
+      const file = this.bucket.file(filename);
+
+      console.log(`📤 Uploading video to Firebase Storage: ${filename}`);
+
+      await file.save(videoBuffer, {
+        metadata: {
+          contentType: 'video/mp4',
+          metadata: {
+            orderId,
+            uploadedAt: new Date().toISOString(),
+          },
+        },
+        public: true,
+        resumable: false,
+      });
+
+      const publicUrl = `https://storage.googleapis.com/${this.bucket.name}/${filename}`;
+
+      console.log(`✅ Video uploaded successfully: ${publicUrl}`);
+      return publicUrl;
+    } catch (error: any) {
+      console.error('Error uploading video to Storage:', error.message);
+      throw new Error(`Firebase Storage video yükleme hatası: ${error.message}`);
+    }
+  }
+
+  /**
+   * Delete file from Firebase Storage
+   */
+  async deleteFile(filepath: string): Promise<void> {
+    try {
+      const file = this.bucket.file(filepath);
+      await file.delete();
+      console.log(`🗑️ Deleted file from Storage: ${filepath}`);
+    } catch (error: any) {
+      console.error('Error deleting file from Storage:', error.message);
+      // Don't throw - file might not exist
+    }
+  }
+
+  /**
+   * Get Firestore database instance (for queue service)
+   */
+  getDb(): admin.firestore.Firestore {
+    return this.db;
+  }
+
+  /**
+   * Get Storage bucket instance
+   */
+  getBucket(): admin.storage.Bucket {
+    return this.bucket;
   }
 }

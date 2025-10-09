@@ -5,6 +5,7 @@ import { MinimaxService } from './services/minimax.service';
 import { OpenAIService } from './services/openai.service';
 import { WhatsAppService } from './services/whatsapp.service';
 import { FirebaseService } from './services/firebase.service';
+import { FirebaseQueueService } from './services/firebase-queue.service';
 import { OrderService } from './services/order.service';
 import { OrderRoutes } from './api/order.routes';
 import { WebhookRoutes } from './api/webhook.routes';
@@ -15,6 +16,7 @@ class App {
   private openaiService: OpenAIService;
   private whatsappService: WhatsAppService;
   private firebaseService: FirebaseService;
+  private queueService: FirebaseQueueService;
   private orderService: OrderService;
 
   constructor() {
@@ -70,12 +72,23 @@ class App {
     // Initialize Firebase service
     this.firebaseService = new FirebaseService(config.firebase.serviceAccountPath);
 
+    // Initialize Firebase Queue service (for async music generation)
+    // Uses Firebase for persistence - no Redis required!
+    console.log('🔄 Initializing Firebase Queue service...');
+    this.queueService = new FirebaseQueueService(
+      this.minimaxService,
+      this.firebaseService,
+      this.whatsappService
+    );
+    console.log('✅ Firebase Queue service initialized - async mode enabled');
+
     // Initialize Order service (manages conversations and orders)
     this.orderService = new OrderService(
       this.minimaxService,
       this.openaiService,
       this.whatsappService,
-      this.firebaseService
+      this.firebaseService,
+      this.queueService
     );
 
     console.log('✅ Services initialized successfully');
@@ -84,6 +97,7 @@ class App {
     console.log('   - bihediye_conversations');
     console.log('   - bihediye_users');
     console.log('   - bihediye_analytics');
+    console.log('   - bihediye_music_queue (async job processing)');
   }
 
   private initializeRoutes(): void {
@@ -156,6 +170,11 @@ class App {
     this.app.get('/admin/stats', async (req: Request, res: Response) => {
       try {
         const stats = await this.orderService.getStats();
+
+        // Add queue stats
+        const queueStats = await this.queueService.getQueueStats();
+        stats.queue = queueStats;
+
         res.json(stats);
       } catch (error: any) {
         res.status(500).json({ error: error.message });
@@ -209,12 +228,16 @@ const app = new App();
 app.listen();
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
+  console.log('Closing Firebase queue service...');
+  await app['queueService'].close();
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
+  console.log('Closing Firebase queue service...');
+  await app['queueService'].close();
   process.exit(0);
 });
