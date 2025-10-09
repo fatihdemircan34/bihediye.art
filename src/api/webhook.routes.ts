@@ -46,60 +46,67 @@ export class WebhookRoutes {
    *
    * Bird.com sends events in this format:
    * {
-   *   "id": "message-id",
-   *   "type": "message.received" | "message.sent" | "message.delivered" | "message.read" | "message.failed",
-   *   "timestamp": "2024-01-01T00:00:00Z",
-   *   "channelId": "channel-id",
-   *   "contact": {
-   *     "id": "contact-id",
-   *     "identifierValue": "+905551234567"
-   *   },
-   *   "message": {
-   *     "id": "msg-id",
-   *     "type": "text" | "media",
-   *     "text": { "text": "message content" },
-   *     "media": { "url": "...", "mediaType": "..." }
+   *   "service": "channels",
+   *   "event": "whatsapp.inbound" | "whatsapp.outbound" | "whatsapp.interaction",
+   *   "payload": {
+   *     "id": "message-id",
+   *     "channelId": "channel-id",
+   *     "sender": { "contact": { "id": "...", "identifierValue": "+905551234567" } },
+   *     "receiver": { "connector": { "id": "...", "identifierValue": "..." } },
+   *     "body": {
+   *       "type": "text" | "image" | "video" | "audio" | "document",
+   *       "text": { "text": "message content" },
+   *       "image": { "url": "..." },
+   *       "video": { "url": "..." }
+   *     },
+   *     "status": "delivered" | "sent" | "read" | "failed",
+   *     "direction": "incoming" | "outgoing",
+   *     "createdAt": "2024-01-01T00:00:00Z"
    *   }
    * }
    */
   private async handleBirdWebhook(req: Request, res: Response): Promise<void> {
     try {
-      const event = req.body;
+      const webhookData = req.body;
 
       // Quickly respond to Bird.com
       res.sendStatus(200);
 
+      // Log FULL payload to see actual structure
+      console.log('Bird.com webhook received - FULL PAYLOAD:', JSON.stringify(webhookData, null, 2));
+
+      const service = webhookData.service;
+      const eventType = webhookData.event;
+      const payload = webhookData.payload;
+
       console.log('Bird.com webhook received:', {
-        id: event.id,
-        type: event.type,
-        timestamp: event.timestamp,
-        channelId: event.channelId,
+        service,
+        eventType,
+        messageId: payload?.id,
+        channelId: payload?.channelId,
+        direction: payload?.direction,
       });
 
       // Process event in background
-      switch (event.type) {
-        case 'message.received':
-          await this.handleMessageReceived(event);
-          break;
+      if (service === 'channels') {
+        switch (eventType) {
+          case 'whatsapp.inbound':
+            await this.handleInboundMessage(payload);
+            break;
 
-        case 'message.sent':
-          await this.handleMessageSent(event);
-          break;
+          case 'whatsapp.outbound':
+            await this.handleOutboundMessage(payload);
+            break;
 
-        case 'message.delivered':
-          await this.handleMessageDelivered(event);
-          break;
+          case 'whatsapp.interaction':
+            await this.handleInteraction(payload);
+            break;
 
-        case 'message.read':
-          await this.handleMessageRead(event);
-          break;
-
-        case 'message.failed':
-          await this.handleMessageFailed(event);
-          break;
-
-        default:
-          console.log('Unknown event type:', event.type);
+          default:
+            console.log('Unknown event type:', eventType);
+        }
+      } else {
+        console.log('Unknown service:', service);
       }
     } catch (error) {
       console.error('Error processing Bird.com webhook:', error);
@@ -108,103 +115,106 @@ export class WebhookRoutes {
   }
 
   /**
-   * Handle incoming message from customer
+   * Handle incoming message from customer (whatsapp.inbound)
    */
-  private async handleMessageReceived(event: any): Promise<void> {
+  private async handleInboundMessage(payload: any): Promise<void> {
     if (!this.orderService) {
       console.error('OrderService not initialized');
       return;
     }
 
-    const contact = event.contact;
-    const message = event.message;
+    const sender = payload.sender?.contact;
+    const body = payload.body;
 
-    if (!contact || !message) {
-      console.error('Invalid message event:', event);
+    if (!sender || !body) {
+      console.error('Invalid inbound message payload:', payload);
       return;
     }
 
-    const from = contact.identifierValue;
+    const from = sender.identifierValue;
 
-    console.log('Message received:', {
+    console.log('Inbound message received:', {
       from,
-      contactId: contact.id,
-      messageType: message.type,
-      messageId: message.id,
+      contactId: sender.id,
+      messageType: body.type,
+      messageId: payload.id,
     });
 
     try {
       // Handle text messages
-      if (message.type === 'text') {
-        const text = message.text?.text;
+      if (body.type === 'text') {
+        const text = body.text?.text;
         if (text) {
           await this.orderService.handleIncomingMessage(from, text);
         }
       }
 
-      // Handle media messages (photos for cover image)
-      else if (message.type === 'media') {
-        const mediaUrl = message.media?.url;
-        const mediaType = message.media?.mediaType;
+      // Handle image messages (photos for cover image)
+      else if (body.type === 'image') {
+        const imageUrl = body.image?.url;
+        if (imageUrl) {
+          await this.orderService.handleIncomingMedia(from, imageUrl, 'image');
+        }
+      }
 
-        if (mediaUrl && mediaType) {
-          await this.orderService.handleIncomingMedia(from, mediaUrl, mediaType);
+      // Handle video messages
+      else if (body.type === 'video') {
+        const videoUrl = body.video?.url;
+        if (videoUrl) {
+          await this.orderService.handleIncomingMedia(from, videoUrl, 'video');
+        }
+      }
+
+      // Handle audio messages
+      else if (body.type === 'audio') {
+        const audioUrl = body.audio?.url;
+        if (audioUrl) {
+          await this.orderService.handleIncomingMedia(from, audioUrl, 'audio');
+        }
+      }
+
+      // Handle document messages
+      else if (body.type === 'document') {
+        const documentUrl = body.document?.url;
+        if (documentUrl) {
+          await this.orderService.handleIncomingMedia(from, documentUrl, 'document');
         }
       }
     } catch (error) {
-      console.error('Error handling message:', error);
+      console.error('Error handling inbound message:', error);
     }
   }
 
   /**
-   * Handle message sent status
+   * Handle outbound message status (whatsapp.outbound)
    */
-  private async handleMessageSent(event: any): Promise<void> {
-    console.log('Message sent:', {
-      messageId: event.message?.id,
-      timestamp: event.timestamp,
+  private async handleOutboundMessage(payload: any): Promise<void> {
+    console.log('Outbound message status:', {
+      messageId: payload.id,
+      status: payload.status,
+      reference: payload.reference,
+      lastStatusAt: payload.lastStatusAt,
     });
 
     // TODO: Update message status in database
+    // - sent
+    // - delivered
+    // - failed
   }
 
   /**
-   * Handle message delivered status
+   * Handle interaction events (whatsapp.interaction)
+   * This includes read receipts and reactions
    */
-  private async handleMessageDelivered(event: any): Promise<void> {
-    console.log('Message delivered:', {
-      messageId: event.message?.id,
-      timestamp: event.timestamp,
+  private async handleInteraction(payload: any): Promise<void> {
+    console.log('Interaction received:', {
+      type: payload.type,
+      messageId: payload.messageId,
+      timestamp: payload.createdAt,
     });
 
-    // TODO: Update delivery status
-  }
-
-  /**
-   * Handle message read status
-   */
-  private async handleMessageRead(event: any): Promise<void> {
-    console.log('Message read:', {
-      messageId: event.message?.id,
-      timestamp: event.timestamp,
-    });
-
-    // TODO: Update read status
-  }
-
-  /**
-   * Handle message failed status
-   */
-  private async handleMessageFailed(event: any): Promise<void> {
-    console.error('Message failed:', {
-      messageId: event.message?.id,
-      timestamp: event.timestamp,
-      error: event.error,
-    });
-
-    // TODO: Handle message failure
-    // - Retry sending
-    // - Notify admin
-    // - Update order status
+    // TODO: Handle interactions
+    // - read receipts
+    // - message reactions
   }
 }
