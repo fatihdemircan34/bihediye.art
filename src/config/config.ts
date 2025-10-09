@@ -1,0 +1,58 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config();
+
+export const config = {
+  port: process.env.PORT || 3000,
+  nodeEnv: process.env.NODE_ENV || 'development',
+
+  // Minimax.io Configuration
+  minimax: {
+    apiKey: process.env.MINIMAX_API_KEY || '',
+    baseUrl: process.env.MINIMAX_BASE_URL || 'https://api.minimax.chat',
+  },
+
+  // OpenAI Configuration
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
+  },
+
+  // Bird.com WhatsApp API Configuration
+  bird: {
+    accessKey: process.env.BIRD_ACCESS_KEY || '',
+    workspaceId: process.env.BIRD_WORKSPACE_ID || '',
+    channelId: process.env.BIRD_CHANNEL_ID || '',
+  },
+
+  // Firebase Configuration
+  firebase: {
+    serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(process.cwd(), 'serviceAccount.json'),
+  },
+};
+
+export const validateConfig = (): void => {
+  const errors: string[] = [];
+
+  if (!config.minimax.apiKey) {
+    errors.push('MINIMAX_API_KEY is required');
+  }
+
+  if (!config.openai.apiKey) {
+    errors.push('OPENAI_API_KEY is required');
+  }
+
+  if (!config.bird.accessKey) {
+    errors.push('BIRD_ACCESS_KEY is required');
+  }
+
+  // Firebase is optional if using default credentials
+  // if (!config.firebase.serviceAccountPath) {
+  //   errors.push('FIREBASE_SERVICE_ACCOUNT_PATH is required');
+  // }
+
+  if (errors.length > 0) {
+    throw new Error(`Configuration errors:\n${errors.join('\n')}`);
+  }
+};
