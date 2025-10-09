@@ -21,7 +21,6 @@ export interface BirdMessage {
     };
     file?: {
       url: string;
-      fileName: string;
     };
     image?: {
       url: string;
@@ -96,7 +95,6 @@ export class WhatsAppService {
           type: 'file',
           file: {
             url: audioUrl,
-            fileName: 'sarki.mp3',
           },
         },
       };
@@ -126,7 +124,6 @@ export class WhatsAppService {
           type: 'file',
           file: {
             url: videoUrl,
-            fileName: 'video.mp4',
           },
         },
       };
@@ -191,7 +188,6 @@ export class WhatsAppService {
           type: 'file',
           file: {
             url: documentUrl,
-            fileName: filename,
           },
         },
       };

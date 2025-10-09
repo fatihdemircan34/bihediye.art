@@ -123,7 +123,9 @@ Yapay zeka ile kişiye özel şarkı hediyesi oluşturuyoruz.
 5️⃣ Klasik
 6️⃣ Rock
 7️⃣ Metal
-8️⃣ Nostaljik`
+8️⃣ Nostaljik
+
+_İptal etmek için "iptal" yazın_`
         );
         conversation.step = 'song1_type';
         break;

@@ -157,55 +157,75 @@ export class FirebaseQueueService {
     const db = this.firebaseService.getDb();
 
     try {
-      // Update progress: Start music generation
-      await this.updateJobProgress(job.id, 10);
+      // Check if music is already generated and uploaded (for retry scenarios)
+      const order = await this.firebaseService.getOrder(orderId);
+      let storageUrl: string;
 
-      // Send status update to user (25% - after lyrics 10%)
-      await this.whatsappService.sendProgressUpdate(
-        phoneNumber,
-        orderId,
-        'Müzik oluşturuluyor...',
-        25
-      );
-
-      // Generate music using Minimax (sync mode - returns hex audio)
-      await this.updateJobProgress(job.id, 30);
-      const musicResult = await this.minimaxService.generateMusic(request);
-
-      console.log(`✅ Music generated successfully for job ${job.id}`);
-
-      // Check if music generation was successful
-      if (musicResult.status !== 'Success' || !musicResult.file_url) {
-        throw new Error('Music generation failed - no file URL returned');
-      }
-
-      await this.updateJobProgress(job.id, 50);
-
-      // Send progress update: Music generated, uploading to storage (50%)
-      await this.whatsappService.sendProgressUpdate(
-        phoneNumber,
-        orderId,
-        'Müzik oluşturuldu, yükleniyor...',
-        50
-      );
-
-      // Convert data URL to buffer and upload to Firebase Storage
-      console.log(`📤 Uploading audio to Firebase Storage...`);
-      let audioBuffer: Buffer;
-
-      if (musicResult.file_url.startsWith('data:audio/mp3;base64,')) {
-        // Extract base64 data and convert to buffer
-        const base64Data = musicResult.file_url.replace('data:audio/mp3;base64,', '');
-        audioBuffer = Buffer.from(base64Data, 'base64');
+      if (order && order.song1AudioUrl && job.attempts > 1) {
+        // Music already exists, skip generation (retry scenario)
+        storageUrl = order.song1AudioUrl;
+        console.log(`♻️ Using existing music from previous attempt: ${storageUrl.substring(0, 100)}...`);
+        await this.updateJobProgress(job.id, 70);
       } else {
-        throw new Error('Invalid audio format from Minimax');
+        // Generate music (first attempt or no existing audio)
+        await this.updateJobProgress(job.id, 10);
+
+        // Send status update to user ONLY on first attempt (25% - after lyrics 10%)
+        if (job.attempts === 1) {
+          await this.whatsappService.sendProgressUpdate(
+            phoneNumber,
+            orderId,
+            'Müzik oluşturuluyor...',
+            25
+          );
+        }
+
+        // Generate music using Minimax (sync mode - returns hex audio)
+        await this.updateJobProgress(job.id, 30);
+        const musicResult = await this.minimaxService.generateMusic(request);
+
+        console.log(`✅ Music generated successfully for job ${job.id}`);
+
+        // Check if music generation was successful
+        if (musicResult.status !== 'Success' || !musicResult.file_url) {
+          throw new Error('Music generation failed - no file URL returned');
+        }
+
+        await this.updateJobProgress(job.id, 50);
+
+        // Send progress update: Music generated, uploading to storage (50%) - ONLY on first attempt
+        if (job.attempts === 1) {
+          await this.whatsappService.sendProgressUpdate(
+            phoneNumber,
+            orderId,
+            'Müzik oluşturuldu, yükleniyor...',
+            50
+          );
+        }
+
+        // Convert data URL to buffer and upload to Firebase Storage
+        console.log(`📤 Uploading audio to Firebase Storage...`);
+        let audioBuffer: Buffer;
+
+        if (musicResult.file_url.startsWith('data:audio/mp3;base64,')) {
+          // Extract base64 data and convert to buffer
+          const base64Data = musicResult.file_url.replace('data:audio/mp3;base64,', '');
+          audioBuffer = Buffer.from(base64Data, 'base64');
+        } else {
+          throw new Error('Invalid audio format from Minimax');
+        }
+
+        // Upload to Firebase Storage
+        storageUrl = await this.firebaseService.uploadAudio(orderId, songIndex, audioBuffer);
+        console.log(`✅ Audio uploaded to Storage: ${storageUrl}`);
+
+        await this.updateJobProgress(job.id, 70);
+
+        // Save Storage URL to order immediately (so retry can use it)
+        await this.firebaseService.updateOrder(orderId, {
+          song1AudioUrl: storageUrl,
+        });
       }
-
-      // Upload to Firebase Storage
-      const storageUrl = await this.firebaseService.uploadAudio(orderId, songIndex, audioBuffer);
-      console.log(`✅ Audio uploaded to Storage: ${storageUrl}`);
-
-      await this.updateJobProgress(job.id, 70);
 
       // Update order in Firebase with Storage URL
       const order = await this.firebaseService.getOrder(orderId);
@@ -226,13 +246,15 @@ export class FirebaseQueueService {
 
       await this.updateJobProgress(job.id, 80);
 
-      // Send progress update: Sending to WhatsApp (80%)
-      await this.whatsappService.sendProgressUpdate(
-        phoneNumber,
-        orderId,
-        'Şarkınız hazır, gönderiliyor...',
-        80
-      );
+      // Send progress update: Sending to WhatsApp (80%) - ONLY on first attempt
+      if (job.attempts === 1) {
+        await this.whatsappService.sendProgressUpdate(
+          phoneNumber,
+          orderId,
+          'Şarkınız hazır, gönderiliyor...',
+          80
+        );
+      }
 
       // Send music file to user via WhatsApp (using Storage URL)
       console.log(`📤 Sending music file to user via WhatsApp...`);
