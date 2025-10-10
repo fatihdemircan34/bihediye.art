@@ -33,18 +33,27 @@ export class OpenAIService {
 
   /**
    * Generate song lyrics using ChatGPT
+   * @param retryForContentModeration - If true, adds extra strict content filtering instructions
    */
-  async generateLyrics(request: LyricsGenerationRequest): Promise<string> {
+  async generateLyrics(request: LyricsGenerationRequest, retryForContentModeration: boolean = false): Promise<string> {
     try {
       const prompt = this.buildLyricsPrompt(request);
 
-      const requestBody: any = {
-        model: this.model,
-        messages: [
-          {
-            role: 'system',
-            content: `Sen profesyonel bir şarkı sözü yazarısın. Duygusal, anlamlı ve müzikal şarkı sözleri yazıyorsun.
+      const systemPrompt = retryForContentModeration
+        ? `Sen profesyonel bir şarkı sözü yazarısın. Duygusal, anlamlı ve müzikal şarkı sözleri yazıyorsun.
             Şarkı sözleri kişiye özel olmalı, samimi ve içten olmalı. Türkçe dilbilgisi kurallarına dikkat et.
+
+            🚨 UYARI: ÖNCEKİ ŞARKI SÖZLERİ İÇERİK DENETİMİNDEN REDDEDİLDİ!
+
+            ⚠️ ÇOK ÇOK ÇOK ÖNEMLİ - KATISIKLA İÇERİK KURALLARI:
+            - Şarkı sözleri MUTLAKA çocuklar için uygun, temiz, pozitif olmalı
+            - YASAK: Şiddet, uyuşturucu, alkol, içki, sigara, cinsellik, argo, küfür, hakaret
+            - YASAK: Siyasi, dini, tartışmalı, üzücü, depresif konular
+            - YASAK: Ölüm, ayrılık, hüzün, keder, pişmanlık temaları
+            - SADECE İZİN VERİLEN: Sevgi, mutluluk, arkadaşlık, aile, çocukluk, anılar, umut, rüyalar
+            - Tüm şarkı çocuk programlarında çalınabilecek kadar temiz olmalı
+            - Her kelimenin pozitif ve neşeli olmasına DİKKAT ET
+            - Şüpheli hiçbir kelime kullanma, %100 güvenli kal
 
             ÖNEMLI FORMAT KURALI:
             Şarkı sözlerini MUTLAKA şu etiketlerle formatla:
@@ -56,7 +65,35 @@ export class OpenAIService {
             [outro] - Çıkış
 
             Her satır kısa ve şarkı söylenebilir olmalı. Uzun cümleler YASAK.
-            Şarkı EN AZ 2 dakika uzunluğunda olmalı, yeterince uzun ve detaylı şarkı sözleri yaz.`,
+            Şarkı EN AZ 2 dakika uzunluğunda olmalı, yeterince uzun ve detaylı şarkı sözleri yaz.`
+        : `Sen profesyonel bir şarkı sözü yazarısın. Duygusal, anlamlı ve müzikal şarkı sözleri yazıyorsun.
+            Şarkı sözleri kişiye özel olmalı, samimi ve içten olmalı. Türkçe dilbilgisi kurallarına dikkat et.
+
+            ⚠️ ÇOK ÖNEMLİ - İÇERİK KURALLARI:
+            - Şarkı sözleri MUTLAKA temiz, pozitif ve uygun olmalı
+            - Şiddet, uyuşturucu, alkol, cinsellik, argo, küfür içeren kelimeler YASAK
+            - Siyasi, dini veya tartışmalı konular YASAK
+            - Sadece sevgi, mutluluk, arkadaşlık, aile, anılar gibi pozitif temalar kullan
+            - Her kelimeyi dikkatli seç - içerik denetiminden geçecek
+
+            ÖNEMLI FORMAT KURALI:
+            Şarkı sözlerini MUTLAKA şu etiketlerle formatla:
+            [intro] - Giriş kısmı
+            [verse] - Kıta
+            [pre-chorus] - Ön nakarat
+            [chorus] - Nakarat
+            [bridge] - Köprü
+            [outro] - Çıkış
+
+            Her satır kısa ve şarkı söylenebilir olmalı. Uzun cümleler YASAK.
+            Şarkı EN AZ 2 dakika uzunluğunda olmalı, yeterince uzun ve detaylı şarkı sözleri yaz.`;
+
+      const requestBody: any = {
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
           },
           {
             role: 'user',

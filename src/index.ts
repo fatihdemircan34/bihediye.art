@@ -84,7 +84,8 @@ class App {
     this.queueService = new FirebaseQueueService(
       this.sunoService,
       this.firebaseService,
-      this.whatsappService
+      this.whatsappService,
+      this.openaiService
     );
     console.log('✅ Firebase Queue service initialized - async mode enabled');
 

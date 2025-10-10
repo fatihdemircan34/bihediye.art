@@ -1,6 +1,7 @@
 import { SunoService, MusicGenerationRequest } from './suno.service';
 import { FirebaseService } from './firebase.service';
 import { WhatsAppService } from './whatsapp.service';
+import { OpenAIService } from './openai.service';
 
 export interface MusicGenerationJob {
   id: string;
@@ -12,6 +13,7 @@ export interface MusicGenerationJob {
   progress: number;
   attempts: number;
   error?: string;
+  contentModerationRetries?: number; // Track content moderation retries separately
   createdAt: Date;
   updatedAt: Date;
   processingStartedAt?: Date;
@@ -27,20 +29,24 @@ export class FirebaseQueueService {
   private sunoService: SunoService;
   private firebaseService: FirebaseService;
   private whatsappService: WhatsAppService;
+  private openaiService: OpenAIService;
   private isProcessing: boolean = false;
   private processingInterval?: NodeJS.Timeout;
   private readonly COLLECTION = 'bihediye_music_queue';
   private readonly POLL_INTERVAL = 2000; // 2 seconds
   private readonly MAX_ATTEMPTS = 3;
+  private readonly MAX_CONTENT_MODERATION_RETRIES = 2; // Max retries for content moderation
 
   constructor(
     sunoService: SunoService,
     firebaseService: FirebaseService,
-    whatsappService: WhatsAppService
+    whatsappService: WhatsAppService,
+    openaiService: OpenAIService
   ) {
     this.sunoService = sunoService;
     this.firebaseService = firebaseService;
     this.whatsappService = whatsappService;
+    this.openaiService = openaiService;
 
     // Start processing jobs
     this.startProcessing();
@@ -188,11 +194,71 @@ export class FirebaseQueueService {
 
         // Wait for music generation to complete (Suno is async, polls every 5 seconds)
         await this.updateJobProgress(job.id, 40);
-        const musicResult = await this.sunoService.waitForTaskCompletion(
-          musicTask.task_id,
-          60,  // max attempts (60 * 5s = 5 minutes)
-          5000 // poll interval (5 seconds)
-        );
+        let musicResult;
+
+        try {
+          musicResult = await this.sunoService.waitForTaskCompletion(
+            musicTask.task_id,
+            60,  // max attempts (60 * 5s = 5 minutes)
+            5000 // poll interval (5 seconds)
+          );
+        } catch (error: any) {
+          // Check if it's a content moderation error
+          if (error.message && error.message.includes('SENSITIVE_WORD_ERROR')) {
+            console.error(`⚠️ Content moderation error detected for job ${job.id}`);
+
+            // Initialize content moderation retries if not exists
+            const contentRetries = job.contentModerationRetries || 0;
+
+            if (contentRetries < this.MAX_CONTENT_MODERATION_RETRIES) {
+              // Regenerate lyrics with stricter content filtering
+              console.log(`🔄 Regenerating lyrics with stricter filtering (attempt ${contentRetries + 1}/${this.MAX_CONTENT_MODERATION_RETRIES})`);
+
+              const order = await this.firebaseService.getOrder(orderId);
+              if (!order) {
+                throw new Error('Order not found');
+              }
+
+              const lyricsRequest = {
+                songDetails: order.orderData.song1,
+                story: order.orderData.story,
+                recipientName: order.orderData.recipientName,
+                recipientRelation: order.orderData.recipientRelation,
+                includeNameInSong: order.orderData.includeNameInSong,
+                notes: order.orderData.notes,
+              };
+
+              // Generate new lyrics with stricter content moderation
+              const newLyrics = await this.openaiService.generateLyrics(lyricsRequest, true);
+              console.log(`✅ New safe lyrics generated (length: ${newLyrics.length})`);
+
+              // Update order with new lyrics
+              await this.firebaseService.updateOrder(orderId, { song1Lyrics: newLyrics });
+
+              // Update job request with new lyrics
+              job.request.lyrics = newLyrics;
+              job.contentModerationRetries = contentRetries + 1;
+
+              // Save updated job and mark as pending for retry
+              await db.collection(this.COLLECTION).doc(job.id).update({
+                'request.lyrics': newLyrics,
+                contentModerationRetries: job.contentModerationRetries,
+                status: 'pending',
+                error: `Content moderation retry ${contentRetries + 1}/${this.MAX_CONTENT_MODERATION_RETRIES}`,
+                updatedAt: new Date().toISOString(),
+              });
+
+              console.log(`✅ Job ${job.id} queued for retry with new lyrics`);
+              return; // Exit and let the queue retry this job
+            } else {
+              console.error(`❌ Max content moderation retries reached for job ${job.id}`);
+              throw new Error(`Content moderation failed after ${this.MAX_CONTENT_MODERATION_RETRIES} retries - lyrics keep getting rejected`);
+            }
+          }
+
+          // Re-throw if not content moderation error
+          throw error;
+        }
 
         console.log(`✅ Music generation completed for job ${job.id}`);
 
