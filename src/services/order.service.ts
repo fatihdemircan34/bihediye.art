@@ -464,7 +464,8 @@ Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
    */
   private async sendOrderConfirmation(conversation: ConversationState): Promise<void> {
     const data = conversation.data;
-    const basePrice = this.calculatePrice(data.deliveryOptions!);
+    // Always use config base price (not calculated from conversation)
+    const basePrice = config.pricing.songBasePrice;
     const finalPrice = conversation.finalPrice || basePrice;
     const discountAmount = conversation.discountAmount || 0;
 
