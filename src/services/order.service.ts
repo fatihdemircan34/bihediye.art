@@ -603,12 +603,6 @@ Onaylıyor musunuz?
       if (order.totalPrice === 0) {
         console.log(`🎁 Free order detected (100% discount) - skipping payment for ${orderId}`);
 
-        // Mark as paid immediately
-        await this.firebaseService.updateOrder(orderId, {
-          status: 'paid',
-          paidAt: new Date(),
-        });
-
         // Send confirmation
         await this.whatsappService.sendTextMessage(
           conversation.phone,
@@ -622,7 +616,7 @@ Onaylıyor musunuz?
 Teşekkür ederiz! ❤️`
         );
 
-        // Start processing immediately
+        // Start processing immediately (handlePaymentSuccess will update status and process)
         await this.handlePaymentSuccess(orderId);
 
         return;
