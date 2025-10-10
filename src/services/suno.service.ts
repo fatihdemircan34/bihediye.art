@@ -160,6 +160,11 @@ export class SunoService {
       // Correct endpoint: /api/v1/generate/record-info?taskId={taskId}
       const response = await this.client.get(`/api/v1/generate/record-info?taskId=${taskId}`);
 
+      // Log full response for debugging
+      if (response.data.data?.status === 'SUCCESS') {
+        console.log('✅ SUCCESS status received - Full task data:', JSON.stringify(response.data.data, null, 2));
+      }
+
       console.log('Task status response:', {
         taskId,
         status: response.data.data?.status,
@@ -172,12 +177,51 @@ export class SunoService {
         const status = taskData.status; // "PENDING", "SUCCESS", "SENSITIVE_WORD_ERROR", etc.
 
         // SUCCESS - task completed with audio URL
-        if (status === 'SUCCESS' && taskData.audio_url) {
+        if (status === 'SUCCESS') {
+          // Suno API V5 returns audio URLs in response.sunoData array
+          const sunoData = taskData.response?.sunoData;
+
+          if (sunoData && Array.isArray(sunoData) && sunoData.length > 0) {
+            // Get the first generated song (or we could use all of them)
+            const firstSong = sunoData[0];
+            const audioUrl = firstSong.audioUrl || firstSong.sourceAudioUrl;
+
+            if (audioUrl) {
+              console.log(`🎵 Audio URL found: ${audioUrl}`);
+              console.log(`   Generated ${sunoData.length} song(s)`);
+              console.log(`   Duration: ${firstSong.duration}s`);
+
+              return {
+                task_id: taskId,
+                status: 'Success',
+                file_url: audioUrl,
+                audio_file: audioUrl,
+              };
+            }
+          }
+
+          // Fallback: Check other possible locations
+          const audioUrl = taskData.audio_url ||
+                          taskData.audioUrl ||
+                          taskData.url ||
+                          taskData.file_url;
+
+          if (audioUrl) {
+            console.log(`🎵 Audio URL found (fallback): ${audioUrl}`);
+            return {
+              task_id: taskId,
+              status: 'Success',
+              file_url: audioUrl,
+              audio_file: audioUrl,
+            };
+          }
+
+          console.error('⚠️ SUCCESS status but no audio URL found in response');
+          console.error('Available fields:', Object.keys(taskData));
+          // Continue waiting - audio might be generated soon
           return {
             task_id: taskId,
-            status: 'Success',
-            file_url: taskData.audio_url,
-            audio_file: taskData.audio_url,
+            status: 'Processing',
           };
         }
 

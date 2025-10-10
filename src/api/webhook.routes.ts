@@ -28,6 +28,9 @@ export class WebhookRoutes {
 
     // Health check for webhook
     this.router.get('/bird', this.verifyWebhook.bind(this));
+
+    // Suno AI callback endpoint
+    this.router.post('/suno/callback', this.handleSunoCallback.bind(this));
   }
 
   /**
@@ -216,5 +219,40 @@ export class WebhookRoutes {
     // TODO: Handle interactions
     // - read receipts
     // - message reactions
+  }
+
+  /**
+   * Handle Suno AI callback
+   * Called when music generation is complete
+   */
+  private async handleSunoCallback(req: Request, res: Response): Promise<void> {
+    try {
+      const callbackData = req.body;
+
+      // Log full callback payload
+      console.log('🎵 Suno callback received - FULL PAYLOAD:', JSON.stringify(callbackData, null, 2));
+
+      // Quickly respond to Suno
+      res.status(200).json({ success: true });
+
+      // Extract task information
+      const taskId = callbackData.taskId || callbackData.task_id;
+      const status = callbackData.status;
+
+      console.log('Suno callback processed:', {
+        taskId,
+        status,
+        timestamp: new Date().toISOString(),
+      });
+
+      // If OrderService is available, notify about completion
+      if (this.orderService && taskId) {
+        // The OrderService will poll for status, so just log here
+        console.log(`✅ Task ${taskId} callback received - OrderService will handle completion`);
+      }
+    } catch (error) {
+      console.error('Error processing Suno callback:', error);
+      // Already sent 200 response
+    }
   }
 }
