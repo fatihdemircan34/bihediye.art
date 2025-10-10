@@ -331,80 +331,99 @@ export function createPaymentRouter(
               padding: 0;
               box-sizing: border-box;
             }
+            html, body {
+              height: 100%;
+              overflow: hidden;
+            }
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              min-height: 100vh;
               display: flex;
               flex-direction: column;
-              align-items: center;
-              padding: 20px;
             }
             .header {
               text-align: center;
               color: white;
-              margin-bottom: 30px;
+              padding: 15px 20px;
+              flex-shrink: 0;
             }
             .header h1 {
-              font-size: 32px;
-              margin-bottom: 10px;
+              font-size: 28px;
+              margin-bottom: 5px;
             }
             .header p {
-              font-size: 18px;
+              font-size: 14px;
               opacity: 0.9;
             }
             .order-info {
               background: rgba(255,255,255,0.95);
-              padding: 20px 30px;
-              border-radius: 15px;
-              margin-bottom: 20px;
-              box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-              max-width: 600px;
-              width: 100%;
+              padding: 15px 20px;
+              margin: 0 20px 15px 20px;
+              border-radius: 10px;
+              box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+              flex-shrink: 0;
             }
             .order-info h2 {
-              font-size: 20px;
+              font-size: 16px;
               color: #333;
-              margin-bottom: 15px;
+              margin-bottom: 10px;
             }
             .order-detail {
               display: flex;
               justify-content: space-between;
-              padding: 10px 0;
+              padding: 8px 0;
               border-bottom: 1px solid #eee;
+              font-size: 14px;
             }
             .order-detail:last-child {
               border-bottom: none;
               font-weight: bold;
-              font-size: 18px;
+              font-size: 16px;
               color: #667eea;
             }
             .payment-container {
               background: white;
-              border-radius: 15px;
-              padding: 20px;
-              box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-              max-width: 800px;
-              width: 100%;
+              border-radius: 15px 15px 0 0;
+              padding: 10px;
+              margin: 0 20px;
+              box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
+              flex: 1;
+              display: flex;
+              flex-direction: column;
+              min-height: 0;
             }
             iframe {
               width: 100%;
-              height: 600px;
+              flex: 1;
               border: none;
               border-radius: 10px;
+              min-height: 500px;
             }
             .footer {
-              margin-top: 30px;
+              padding: 10px 20px;
               text-align: center;
-              color: rgba(255,255,255,0.8);
-              font-size: 14px;
+              color: rgba(255,255,255,0.9);
+              font-size: 12px;
+              flex-shrink: 0;
+              background: rgba(0,0,0,0.1);
             }
             @media (max-width: 768px) {
               .header h1 {
-                font-size: 24px;
+                font-size: 22px;
+              }
+              .header p {
+                font-size: 12px;
+              }
+              .order-info {
+                margin: 0 10px 10px 10px;
+                padding: 12px 15px;
+              }
+              .payment-container {
+                margin: 0 10px;
+                padding: 8px;
               }
               iframe {
-                height: 500px;
+                min-height: 400px;
               }
             }
           </style>
