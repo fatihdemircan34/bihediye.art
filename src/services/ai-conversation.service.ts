@@ -26,33 +26,41 @@ export class AIConversationService {
 
   /**
    * Parse user message and extract song type selection
+   * If user provides an artist name, detect it and describe the musical style
    */
-  async parseSongType(userMessage: string): Promise<{ type: 'Pop' | 'Rap' | 'Jazz' | 'Arabesk' | 'Klasik' | 'Rock' | 'Metal' | 'Nostaljik' | null; response: string }> {
+  async parseSongType(userMessage: string): Promise<{
+    type: 'Pop' | 'Rap' | 'Jazz' | 'Arabesk' | 'Klasik' | 'Rock' | 'Metal' | 'Nostaljik' | null;
+    response: string;
+    artistStyleDescription?: string;
+  }> {
     const prompt = `Kullanıcı şarkı türü seçiyor. Mesajı: "${userMessage}"
 
 Müsait şarkı türleri: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
 
 Görevin:
 1. Kullanıcının mesajından şarkı türünü anlamaya çalış
-2. Eğer net bir tür belirtmişse, o türü döndür
-3. Eğer anlaşılmıyorsa veya alakasız bir şey yazmışsa, null döndür ve nazikçe seçenekleri hatırlat
+2. **ÇOK ÖNEMLİ**: Eğer kullanıcı bir SANATÇI İSMİ yazdıysa (örn: Mabel Matiz, Tarkan, Sezen Aksu), o sanatçının müzikal tarzını İNGİLİZCE olarak betimle
+3. Eğer net bir tür belirtmişse, o türü döndür
+4. Eğer anlaşılmıyorsa, null döndür
+
+**SANATÇI İSMİ ÖRNEKLER**:
+- "Mabel Matiz" → type: "Jazz", artistStyleDescription: "smooth Turkish jazz with emotional male vocals, melancholic melodies and modern arrangements"
+- "Tarkan" → type: "Pop", artistStyleDescription: "energetic Turkish pop with powerful male vocals and dance rhythms"
+- "Sezen Aksu" → type: "Pop", artistStyleDescription: "classic Turkish pop ballads with soulful female vocals and poetic lyrics"
+- "Ajda Pekkan" → type: "Pop", artistStyleDescription: "upbeat Turkish pop with elegant female vocals and dance beats"
+- "Rock" → type: "Rock", artistStyleDescription: null (bu bir tür, sanatçı değil)
 
 KURALLAR:
-- "type" değeri MUTLAKA yukarıdaki şarkı türlerinden TAM OLARAK biri olmalı (Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik)
-- Kullanıcı "pop müzik", "pop şarkı", sadece "pop" yazabilir - hepsini "Pop" olarak algıla
-- Benzer şekilde diğer türler için de esneklik göster
-- Eğer tamamen alakasız bir mesaj yazdıysa (örn: "merhaba", "günaydın") null döndür
+- "type" değeri MUTLAKA yukarıdaki şarkı türlerinden TAM OLARAK biri olmalı
+- "artistStyleDescription" sadece sanatçı ismi yazılmışsa doldurulmalı, İNGİLİZCE olmalı ve SANATÇI İSMİ İÇERMEMELİ (çok önemli!)
+- Eğer sanatçının tarzı anlaşılmıyorsa, en yakın müzik türünü tahmin et ve genel bir betim yaz
 
 JSON formatında cevap ver:
 {
   "type": "Pop" (veya başka bir tür) veya null (anlaşılmadıysa),
+  "artistStyleDescription": "müzikal özellikler (İngilizce, sanatçı ismi YOK)" veya null,
   "response": "Kullanıcıya gönderilecek sıcak, samimi mesaj"
-}
-
-Eğer type null ise, response'da şöyle bir mesaj ver:
-"Üzgünüm, tam anlayamadım 😊 Hangi türde bir şarkı istersiniz?
-
-Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini seçebilirsiniz. İstediğiniz türü yazmanız yeterli!"`;
+}`;
 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
@@ -60,6 +68,12 @@ Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini 
 
       const parsed = this.cleanAndParseJSON(result);
       console.log('AI parseSongType parsed:', parsed);
+
+      // Log artist style description if present
+      if (parsed.artistStyleDescription) {
+        console.log('🎨 Artist style detected:', parsed.artistStyleDescription);
+      }
+
       return parsed;
     } catch (error) {
       console.error('AI parse error:', error);

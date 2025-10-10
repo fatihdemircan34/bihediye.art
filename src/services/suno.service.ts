@@ -12,6 +12,7 @@ export interface MusicGenerationRequest {
   style: string;        // Romantik, Duygusal, etc.
   vocal?: string;       // Kadın, Erkek, Fark etmez
   duration?: number;
+  artistStyleDescription?: string; // Optional artist style description (NO artist names!)
 }
 
 export interface VideoGenerationRequest {
@@ -329,12 +330,19 @@ export class SunoService {
   /**
    * Build music style based on song details
    * Combines genre, style, and vocal characteristics
+   * If artistStyleDescription is provided, use it INSTEAD of translateMusicType
    */
   private buildMusicStyle(request: MusicGenerationRequest): string {
     const parts: string[] = [];
 
-    // Müzik türü
-    parts.push(this.translateMusicType(request.songType));
+    // If artist style description provided, use it (it already excludes artist names)
+    if (request.artistStyleDescription) {
+      console.log('🎨 Using artist style description:', request.artistStyleDescription);
+      parts.push(request.artistStyleDescription);
+    } else {
+      // Normal flow: translate music type
+      parts.push(this.translateMusicType(request.songType));
+    }
 
     // Tarz/Ruh hali
     parts.push(this.translateStyle(request.style));

@@ -2,6 +2,7 @@ export interface SongDetails {
   type: 'Pop' | 'Rap' | 'Jazz' | 'Arabesk' | 'Klasik' | 'Rock' | 'Metal' | 'Nostaljik';
   style: 'Romantik' | 'Duygusal' | 'Eğlenceli' | 'Sakin';
   vocal?: 'Kadın' | 'Erkek' | 'Fark etmez';
+  artistStyleDescription?: string; // Optional artist style (when user provides artist name)
 }
 
 export interface DeliveryOption {

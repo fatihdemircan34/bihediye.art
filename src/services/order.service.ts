@@ -171,12 +171,21 @@ _İstediğiniz zaman "iptal" yazarak vazgeçebilirsiniz_`
           return;
         }
 
-        conversation.data.song1 = { type: songTypeResult.type } as any;
+        conversation.data.song1 = {
+          type: songTypeResult.type,
+          artistStyleDescription: songTypeResult.artistStyleDescription, // Save artist style if provided
+        } as any;
+
+        // Log artist style if detected
+        if (songTypeResult.artistStyleDescription) {
+          console.log(`🎨 Artist style saved for ${from}: ${songTypeResult.artistStyleDescription}`);
+        }
 
         // Log analytics: song type selected
         await this.firebaseService.logAnalytics('song_type_selected', {
           phone: from,
           songType: songTypeResult.type,
+          hasArtistStyle: !!songTypeResult.artistStyleDescription,
           timestamp: new Date().toISOString(),
         });
 
@@ -931,6 +940,7 @@ Sipariş numaranız: ${orderId}`
             songType: synthesizedGenre, // Use synthesized genre instead of basic type
             style: order.orderData.song1.style,
             vocal: order.orderData.song1.vocal,
+            artistStyleDescription: order.orderData.song1.artistStyleDescription, // Pass artist style
           },
         });
         // Queue will handle the rest (music generation + delivery)
@@ -943,6 +953,7 @@ Sipariş numaranız: ${orderId}`
           songType: order.orderData.song1.type,
           style: order.orderData.song1.style,
           vocal: order.orderData.song1.vocal,
+          artistStyleDescription: order.orderData.song1.artistStyleDescription, // Pass artist style
         });
 
         const song1Music = await this.sunoService.waitForTaskCompletion(song1Task.task_id);
