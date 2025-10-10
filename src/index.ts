@@ -8,9 +8,11 @@ import { FirebaseService } from './services/firebase.service';
 import { FirebaseQueueService } from './services/firebase-queue.service';
 import { PaytrService } from './services/paytr.service';
 import { OrderService } from './services/order.service';
+import { DiscountService } from './services/discount.service';
 import { OrderRoutes } from './api/order.routes';
 import { WebhookRoutes } from './api/webhook.routes';
 import { createPaymentRouter } from './routes/payment.routes';
+import { createAdminRouter } from './routes/admin.routes';
 
 class App {
   private app: Express;
@@ -21,6 +23,7 @@ class App {
   private queueService: FirebaseQueueService;
   private paytrService?: PaytrService;
   private orderService: OrderService;
+  private discountService: DiscountService;
 
   constructor() {
     this.app = express();
@@ -103,6 +106,9 @@ class App {
       console.warn('   Set PAYTR_MERCHANT_ID, PAYTR_MERCHANT_KEY, PAYTR_MERCHANT_SALT in .env');
     }
 
+    // Initialize Discount service
+    this.discountService = new DiscountService(this.firebaseService);
+
     // Initialize Order service (manages conversations and orders)
     this.orderService = new OrderService(
       this.minimaxService,
@@ -152,6 +158,11 @@ class App {
       this.app.use('/payment', paymentRouter);
       console.log('✅ Payment routes initialized (/payment/*)');
     }
+
+    // Admin panel routes
+    const adminRouter = createAdminRouter(this.orderService, this.discountService);
+    this.app.use('/admin', adminRouter);
+    console.log('✅ Admin panel initialized (/admin)');
 
     // API routes (for manual order creation if needed)
     const orderRoutes = new OrderRoutes(

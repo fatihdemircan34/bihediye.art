@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { Order } from '../models/order.model';
 import { ConversationState } from './order.service';
+import { DiscountCode, DiscountUsage } from '../models/discount.model';
 import { GA4Service } from './ga4.service';
 import { config } from '../config/config';
 
@@ -16,6 +17,8 @@ export class FirebaseService {
     CONVERSATIONS: 'bihediye_conversations',
     USERS: 'bihediye_users',
     ANALYTICS: 'bihediye_analytics',
+    DISCOUNTS: 'bihediye_discounts',
+    DISCOUNT_USAGES: 'bihediye_discount_usages',
   };
 
   constructor(serviceAccountPath?: string) {
@@ -511,5 +514,150 @@ export class FirebaseService {
    */
   getBucket(): any {
     return this.bucket;
+  }
+
+  /**
+   * DISCOUNT CODES COLLECTION
+   */
+
+  async saveDiscountCode(discountCode: DiscountCode): Promise<void> {
+    try {
+      await this.db.collection(this.COLLECTIONS.DISCOUNTS).doc(discountCode.id).set({
+        ...discountCode,
+        validFrom: admin.firestore.Timestamp.fromDate(discountCode.validFrom),
+        validUntil: discountCode.validUntil
+          ? admin.firestore.Timestamp.fromDate(discountCode.validUntil)
+          : null,
+        createdAt: admin.firestore.Timestamp.fromDate(discountCode.createdAt),
+      });
+    } catch (error) {
+      console.error('Error saving discount code:', error);
+      throw error;
+    }
+  }
+
+  async getDiscountCodeByCode(code: string): Promise<DiscountCode | null> {
+    try {
+      const snapshot = await this.db
+        .collection(this.COLLECTIONS.DISCOUNTS)
+        .where('code', '==', code.toUpperCase())
+        .limit(1)
+        .get();
+
+      if (snapshot.empty) {
+        return null;
+      }
+
+      const data = snapshot.docs[0].data();
+      return {
+        ...data,
+        validFrom: data.validFrom?.toDate(),
+        validUntil: data.validUntil?.toDate(),
+        createdAt: data.createdAt?.toDate(),
+      } as DiscountCode;
+    } catch (error) {
+      console.error('Error getting discount code:', error);
+      throw error;
+    }
+  }
+
+  async getAllDiscountCodes(): Promise<DiscountCode[]> {
+    try {
+      const snapshot = await this.db
+        .collection(this.COLLECTIONS.DISCOUNTS)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          validFrom: data.validFrom?.toDate(),
+          validUntil: data.validUntil?.toDate(),
+          createdAt: data.createdAt?.toDate(),
+        } as DiscountCode;
+      });
+    } catch (error) {
+      console.error('Error getting all discount codes:', error);
+      throw error;
+    }
+  }
+
+  async updateDiscountCode(id: string, updates: Partial<DiscountCode>): Promise<void> {
+    try {
+      const updateData: any = { ...updates };
+
+      if (updates.validFrom) {
+        updateData.validFrom = admin.firestore.Timestamp.fromDate(updates.validFrom);
+      }
+      if (updates.validUntil) {
+        updateData.validUntil = admin.firestore.Timestamp.fromDate(updates.validUntil);
+      }
+
+      await this.db.collection(this.COLLECTIONS.DISCOUNTS).doc(id).update(updateData);
+    } catch (error) {
+      console.error('Error updating discount code:', error);
+      throw error;
+    }
+  }
+
+  async deleteDiscountCode(id: string): Promise<void> {
+    try {
+      await this.db.collection(this.COLLECTIONS.DISCOUNTS).doc(id).delete();
+    } catch (error) {
+      console.error('Error deleting discount code:', error);
+      throw error;
+    }
+  }
+
+  async incrementDiscountUsage(discountCodeId: string): Promise<void> {
+    try {
+      await this.db
+        .collection(this.COLLECTIONS.DISCOUNTS)
+        .doc(discountCodeId)
+        .update({
+          usedCount: admin.firestore.FieldValue.increment(1),
+        });
+    } catch (error) {
+      console.error('Error incrementing discount usage:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DISCOUNT USAGES COLLECTION
+   */
+
+  async saveDiscountUsage(usage: DiscountUsage): Promise<void> {
+    try {
+      await this.db.collection(this.COLLECTIONS.DISCOUNT_USAGES).doc(usage.id).set({
+        ...usage,
+        usedAt: admin.firestore.Timestamp.fromDate(usage.usedAt),
+      });
+    } catch (error) {
+      console.error('Error saving discount usage:', error);
+      throw error;
+    }
+  }
+
+  async getDiscountUsages(discountCodeId: string): Promise<DiscountUsage[]> {
+    try {
+      const snapshot = await this.db
+        .collection(this.COLLECTIONS.DISCOUNT_USAGES)
+        .where('discountCodeId', '==', discountCodeId)
+        .orderBy('usedAt', 'desc')
+        .get();
+
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          ...data,
+          usedAt: data.usedAt?.toDate(),
+        } as DiscountUsage;
+      });
+    } catch (error) {
+      console.error('Error getting discount usages:', error);
+      throw error;
+    }
   }
 }

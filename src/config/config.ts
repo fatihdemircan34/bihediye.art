@@ -50,6 +50,12 @@ export const config = {
     measurementId: process.env.GA4_MEASUREMENT_ID || '',
     apiSecret: process.env.GA4_API_SECRET || '',
   },
+
+  // Admin Panel Configuration
+  admin: {
+    username: process.env.ADMIN_USERNAME || 'admin',
+    password: process.env.ADMIN_PASSWORD || 'changeme123',
+  },
 };
 
 export const validateConfig = (): void => {
