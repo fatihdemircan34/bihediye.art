@@ -464,10 +464,30 @@ Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
    */
   private async sendOrderConfirmation(conversation: ConversationState): Promise<void> {
     const data = conversation.data;
-    // Always use config base price (not calculated from conversation)
+    // CRITICAL: Always use current config base price
     const basePrice = config.pricing.songBasePrice;
-    const finalPrice = conversation.finalPrice || basePrice;
-    const discountAmount = conversation.discountAmount || 0;
+
+    // Recalculate discount if discount code exists (to handle cached old prices)
+    let finalPrice = basePrice;
+    let discountAmount = 0;
+
+    if (conversation.discountCode) {
+      // Re-validate and apply discount with CURRENT basePrice
+      const discountResult = await this.discountService.validateAndApplyDiscount(
+        conversation.discountCode,
+        conversation.phone,
+        basePrice
+      );
+
+      if (discountResult.isValid && discountResult.discountCode) {
+        discountAmount = discountResult.discountAmount;
+        finalPrice = discountResult.finalPrice;
+
+        // Update conversation with fresh values
+        conversation.discountAmount = discountAmount;
+        conversation.finalPrice = finalPrice;
+      }
+    }
 
     let pricingText = '';
     if (discountAmount > 0) {
