@@ -534,9 +534,26 @@ Onaylıyor musunuz?
       const orderRequest: OrderRequest = conversation.data as OrderRequest;
       orderRequest.phone = conversation.phone;
 
+      // CRITICAL: Always use current config base price
       const pricing = this.calculatePriceDetails(orderRequest.deliveryOptions);
-      const finalPrice = conversation.finalPrice || pricing.totalPrice;
-      const discountAmount = conversation.discountAmount || 0;
+
+      // Recalculate discount with current basePrice (handle cached old values)
+      let finalPrice = pricing.totalPrice;
+      let discountAmount = 0;
+
+      if (conversation.discountCode) {
+        // Re-validate and apply discount with CURRENT basePrice
+        const discountResult = await this.discountService.validateAndApplyDiscount(
+          conversation.discountCode,
+          conversation.phone,
+          pricing.totalPrice
+        );
+
+        if (discountResult.isValid && discountResult.discountCode) {
+          discountAmount = discountResult.discountAmount;
+          finalPrice = discountResult.finalPrice;
+        }
+      }
 
       const order: Order = {
         id: orderId,
