@@ -157,7 +157,8 @@ export class SunoService {
     try {
       console.log(`⏳ Checking Suno task status for: ${taskId}`);
 
-      const response = await this.client.get(`/api/v1/task/${taskId}`);
+      // Correct endpoint: /api/v1/generate/record-info?taskId={taskId}
+      const response = await this.client.get(`/api/v1/generate/record-info?taskId=${taskId}`);
 
       console.log('Task status response:', {
         taskId,
@@ -168,9 +169,10 @@ export class SunoService {
       // Suno API returns task status and audio URL when complete
       if (response.data.code === 200 && response.data.data) {
         const taskData = response.data.data;
-        const status = taskData.status; // "pending", "processing", "completed", "failed"
+        const status = taskData.status; // "PENDING", "SUCCESS", "SENSITIVE_WORD_ERROR", etc.
 
-        if (status === 'completed' && taskData.audio_url) {
+        // SUCCESS - task completed with audio URL
+        if (status === 'SUCCESS' && taskData.audio_url) {
           return {
             task_id: taskId,
             status: 'Success',
@@ -179,13 +181,24 @@ export class SunoService {
           };
         }
 
-        if (status === 'failed') {
+        // SENSITIVE_WORD_ERROR - content moderation issue
+        if (status === 'SENSITIVE_WORD_ERROR') {
+          console.error('❌ Suno content moderation error: Lyrics contain sensitive words');
           return {
             task_id: taskId,
             status: 'Failed',
           };
         }
 
+        // Any other failed status
+        if (status.includes('ERROR') || status === 'FAILED') {
+          return {
+            task_id: taskId,
+            status: 'Failed',
+          };
+        }
+
+        // Still processing
         return {
           task_id: taskId,
           status: 'Processing',
