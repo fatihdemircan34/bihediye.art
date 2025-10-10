@@ -40,7 +40,7 @@ JSON formatında cevap ver:
   /**
    * Parse song style selection
    */
-  async parseSongStyle(userMessage: string, songType: string): Promise<{ style: string | null; response: string }> {
+  async parseSongStyle(userMessage: string, songType: string): Promise<{ style: 'Romantik' | 'Duygusal' | 'Eğlenceli' | 'Sakin' | null; response: string }> {
     const prompt = `Kullanıcı ${songType} şarkısı için tarz seçiyor. Mesajı: "${userMessage}"
 
 Müsait tarzlar: Romantik, Duygusal, Eğlenceli, Sakin
@@ -66,7 +66,7 @@ JSON formatında cevap ver:
   /**
    * Parse vocal preference
    */
-  async parseVocal(userMessage: string): Promise<{ vocal: string | null; response: string }> {
+  async parseVocal(userMessage: string): Promise<{ vocal: 'Kadın' | 'Erkek' | 'Fark etmez' | null; response: string }> {
     const prompt = `Kullanıcı vokal tercihi belirtiyor. Mesajı: "${userMessage}"
 
 Seçenekler: Kadın, Erkek, Fark etmez
