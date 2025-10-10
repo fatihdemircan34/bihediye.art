@@ -15,16 +15,27 @@ export class AIConversationService {
 
 Müsait şarkı türleri: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
 
-Eğer kullanıcı bir tür seçtiyse (sayı veya isim), o türü döndür.
-Eğer kararsızsa veya soru soruyorsa, yardımcı ol ve seçenekleri açıkla.
+Görevin:
+1. Kullanıcının mesajından şarkı türünü anlamaya çalış
+2. Eğer net bir tür belirtmişse, o türü döndür
+3. Eğer anlaşılmıyorsa veya alakasız bir şey yazmışsa, null döndür ve nazikçe seçenekleri hatırlat
 
-ÖNEMLI: "type" değeri MUTLAKA yukarıdaki şarkı türlerinden biri olmalı. Tam olarak aynı yazımla döndür (örn: "Pop", "Rap", "Jazz").
+KURALLAR:
+- "type" değeri MUTLAKA yukarıdaki şarkı türlerinden TAM OLARAK biri olmalı (Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik)
+- Kullanıcı "pop müzik", "pop şarkı", sadece "pop" yazabilir - hepsini "Pop" olarak algıla
+- Benzer şekilde diğer türler için de esneklik göster
+- Eğer tamamen alakasız bir mesaj yazdıysa (örn: "merhaba", "günaydın") null döndür
 
 JSON formatında cevap ver:
 {
-  "type": "Pop" veya null (eğer seçim yapmadıysa),
-  "response": "Kullanıcıya gönderilecek mesaj (sıcak, samimi, yardımsever)"
-}`;
+  "type": "Pop" (veya başka bir tür) veya null (anlaşılmadıysa),
+  "response": "Kullanıcıya gönderilecek sıcak, samimi mesaj"
+}
+
+Eğer type null ise, response'da şöyle bir mesaj ver:
+"Üzgünüm, tam anlayamadım 😊 Hangi türde bir şarkı istersiniz?
+
+Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini seçebilirsiniz. İstediğiniz türü yazmanız yeterli!"`;
 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
@@ -36,7 +47,9 @@ JSON formatında cevap ver:
       console.error('AI parse error:', error);
       return {
         type: null,
-        response: '❌ Üzgünüm, anlamadım. Lütfen 1-8 arası numara veya şarkı türü ismi yazın (örn: Pop, Jazz, Rap)',
+        response: `Üzgünüm, tam anlayamadım 😊 Hangi türde bir şarkı istersiniz?
+
+Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini seçebilirsiniz. İstediğiniz türü yazmanız yeterli!`,
       };
     }
   }
