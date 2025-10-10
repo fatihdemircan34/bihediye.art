@@ -73,7 +73,7 @@ export class OrderRoutes {
         order.whatsappPhone,
         orderId,
         order.totalPrice,
-        order.estimatedDelivery
+        order.estimatedDelivery!
       );
 
       // Start processing in background
@@ -89,7 +89,7 @@ export class OrderRoutes {
         status: 'pending',
         message: 'Sipariş alındı, işleme başlandı',
         totalPrice: order.totalPrice,
-        estimatedDelivery: order.estimatedDelivery,
+        estimatedDelivery: order.estimatedDelivery!,
       };
 
       res.status(202).json(response);

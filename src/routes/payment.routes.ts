@@ -161,7 +161,8 @@ export function createPaymentRouter(
 
       if (!isValid) {
         console.error('❌ PayTR callback hash verification failed');
-        return res.status(400).send('OK'); // Yine de "OK" dön (PayTR için)
+        res.status(400).send('OK'); // Yine de "OK" dön (PayTR için)
+        return;
       }
 
       // Ödeme başarılı mı?
@@ -206,7 +207,7 @@ export function createPaymentRouter(
       const order = await orderService.getOrder(orderId);
 
       if (!order) {
-        return res.status(404).send(`
+        res.status(404).send(`
           <!DOCTYPE html>
           <html>
           <head>
@@ -237,11 +238,12 @@ export function createPaymentRouter(
           </body>
           </html>
         `);
+        return;
       }
 
       // Ödeme token kontrolü
       if (!order.paymentToken) {
-        return res.status(400).send(`
+        res.status(400).send(`
           <!DOCTYPE html>
           <html>
           <head>
@@ -272,11 +274,12 @@ export function createPaymentRouter(
           </body>
           </html>
         `);
+        return;
       }
 
       // Ödeme zaten tamamlanmış mı?
       if (order.status !== 'payment_pending') {
-        return res.send(`
+        res.send(`
           <!DOCTYPE html>
           <html>
           <head>
@@ -308,6 +311,7 @@ export function createPaymentRouter(
           </body>
           </html>
         `);
+        return;
       }
 
       // PayTR iframe URL

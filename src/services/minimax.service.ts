@@ -23,6 +23,7 @@ export interface VideoGenerationRequest {
 export interface MinimaxTaskResponse {
   task_id: string;
   status: string;
+  file_url?: string;
   base_resp?: {
     status_code: number;
     status_msg: string;
