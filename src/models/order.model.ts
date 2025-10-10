@@ -61,6 +61,8 @@ export interface Order {
   basePrice: number;
   additionalCosts: number;
   totalPrice: number;
+  discountCode?: string;
+  discountAmount?: number;
 
   // Tarihler
   createdAt: Date;

@@ -6,6 +6,7 @@ import { WhatsAppService } from './whatsapp.service';
 import { FirebaseService } from './firebase.service';
 import { FirebaseQueueService } from './firebase-queue.service';
 import { PaytrService } from './paytr.service';
+import { DiscountService } from './discount.service';
 import { AIConversationService } from './ai-conversation.service';
 import { config } from '../config/config';
 
@@ -26,15 +27,20 @@ export interface ConversationState {
     | 'notes'
     | 'delivery_options'
     | 'cover_photo'
+    | 'discount_code'
     | 'confirm'
     | 'processing';
   data: Partial<OrderRequest>;
+  discountCode?: string;
+  discountAmount?: number;
+  finalPrice?: number;
   lastUpdated: Date;
 }
 
 export class OrderService {
   private queueService?: FirebaseQueueService;
   private paytrService?: PaytrService;
+  private discountService: DiscountService;
   private aiConversationService: AIConversationService;
 
   constructor(
@@ -47,6 +53,7 @@ export class OrderService {
   ) {
     this.queueService = queueService;
     this.paytrService = paytrService;
+    this.discountService = new DiscountService(firebaseService);
     this.aiConversationService = new AIConversationService(openaiService);
     // Start cleanup job for old conversations
     this.startCleanupJob();
@@ -344,7 +351,56 @@ Yoksa "hayır" veya "yok" yazabilirsiniz.`
           musicPlatform: false,
           video: false
         };
-        await this.sendOrderConfirmation(conversation);
+
+        // Ask for discount code
+        await this.whatsappService.sendTextMessage(
+          from,
+          `${notesResult.response}
+
+🎁 *İndirim Kodunuz Var Mı?*
+
+Eğer bir indirim kodunuz varsa şimdi girebilirsiniz.
+
+Yoksa "hayır" veya "yok" yazabilirsiniz.`
+        );
+        conversation.step = 'discount_code';
+        break;
+
+      case 'discount_code':
+        const messageLower = message.toLowerCase().trim();
+
+        // Check if user doesn't have a discount code
+        if (messageLower === 'hayır' || messageLower === 'yok' || messageLower === 'hayir') {
+          await this.sendOrderConfirmation(conversation);
+          break;
+        }
+
+        // Try to apply discount code
+        const basePrice = this.calculatePrice(conversation.data.deliveryOptions!);
+        const discountResult = await this.discountService.validateAndApplyDiscount(
+          message.trim().toUpperCase(),
+          from,
+          basePrice
+        );
+
+        if (discountResult.isValid && discountResult.discountCode) {
+          // Save discount info to conversation
+          conversation.discountCode = discountResult.discountCode.code;
+          conversation.discountAmount = discountResult.discountAmount;
+          conversation.finalPrice = discountResult.finalPrice;
+
+          await this.whatsappService.sendTextMessage(from, discountResult.message);
+          await this.sendOrderConfirmation(conversation);
+        } else {
+          // Invalid code - ask again
+          await this.whatsappService.sendTextMessage(
+            from,
+            `${discountResult.message}
+
+Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
+          );
+          // Stay on discount_code step
+        }
         break;
 
       case 'confirm':
@@ -408,7 +464,18 @@ Yoksa "hayır" veya "yok" yazabilirsiniz.`
    */
   private async sendOrderConfirmation(conversation: ConversationState): Promise<void> {
     const data = conversation.data;
-    const price = this.calculatePrice(data.deliveryOptions!);
+    const basePrice = this.calculatePrice(data.deliveryOptions!);
+    const finalPrice = conversation.finalPrice || basePrice;
+    const discountAmount = conversation.discountAmount || 0;
+
+    let pricingText = '';
+    if (discountAmount > 0) {
+      pricingText = `💰 *Fiyat: ${basePrice} TL*
+🎁 *İndirim: -${discountAmount} TL* (${conversation.discountCode})
+✨ *Toplam: ${finalPrice} TL*`;
+    } else {
+      pricingText = `💰 *Toplam: ${finalPrice} TL*`;
+    }
 
     const summary = `📋 *Sipariş Özeti*
 
@@ -425,7 +492,7 @@ ${data.includeNameInSong ? `📝 İsim: ${data.recipientName}` : '📝 İsim ge�
 *Teslimat:*
 ${data.deliveryOptions?.audioFile ? '✅ Ses Dosyası\n' : ''}${data.deliveryOptions?.musicPlatform ? '✅ SoundCloud\n' : ''}${data.deliveryOptions?.video ? '✅ Video\n' : ''}
 
-💰 *Toplam: ${price} TL*
+${pricingText}
 
 ⏰ Teslimat: 2 saat içinde
 
@@ -447,6 +514,8 @@ Onaylıyor musunuz?
       orderRequest.phone = conversation.phone;
 
       const pricing = this.calculatePriceDetails(orderRequest.deliveryOptions);
+      const finalPrice = conversation.finalPrice || pricing.totalPrice;
+      const discountAmount = conversation.discountAmount || 0;
 
       const order: Order = {
         id: orderId,
@@ -455,13 +524,32 @@ Onaylıyor musunuz?
         status: 'payment_pending', // Ödeme bekliyor
         basePrice: pricing.basePrice,
         additionalCosts: pricing.additionalCosts,
-        totalPrice: pricing.totalPrice,
+        totalPrice: finalPrice,
+        discountCode: conversation.discountCode,
+        discountAmount: discountAmount,
         createdAt: new Date(),
         estimatedDelivery: new Date(Date.now() + 2 * 60 * 60 * 1000),
       };
 
       // Save order to Firebase
       await this.firebaseService.saveOrder(order);
+
+      // Record discount usage if applied
+      if (conversation.discountCode && discountAmount > 0) {
+        const discountCodes = await this.discountService.getAllDiscountCodes();
+        const discountCodeObj = discountCodes.find(d => d.code === conversation.discountCode);
+        if (discountCodeObj) {
+          await this.discountService.recordDiscountUsage(
+            discountCodeObj.id,
+            orderId,
+            conversation.phone,
+            discountAmount,
+            pricing.totalPrice,
+            finalPrice
+          );
+          console.log(`✅ Discount code ${conversation.discountCode} applied to order ${orderId}`);
+        }
+      }
 
       conversation.step = 'processing';
       await this.firebaseService.saveConversation(conversation);
