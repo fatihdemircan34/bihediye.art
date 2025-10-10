@@ -264,6 +264,69 @@ export class OpenAIService {
   }
 
   /**
+   * Synthesize music genre/style for Suno AI V5
+   * Combines user's genre selection + notes to create a rich, detailed style description
+   */
+  async synthesizeMusicGenre(request: LyricsGenerationRequest): Promise<string> {
+    try {
+      const parts: string[] = [];
+
+      parts.push(`Sen müzik tür uzmanısın. Kullanıcının istediği müzik türünü ve notlarını analiz edip Suno AI V5 için detaylı bir tür açıklaması oluştur.`);
+      parts.push(`\n**Kullanıcının seçtiği tür:** ${request.songDetails.type}`);
+      parts.push(`**Kullanıcının seçtiği tarz:** ${request.songDetails.style}`);
+
+      if (request.notes) {
+        parts.push(`\n**Kullanıcının ek notları:** ${request.notes}`);
+        parts.push(`\nÖNEMLİ: Eğer ek notlarda "Melike Şahin tarzı", "Norm Ender gibi", "Ceza rap" gibi sanatçı/tarz belirtmişse bunu MUTLAKA tür açıklamasına ekle.`);
+      }
+
+      parts.push(`\n**GÖREV:**`);
+      parts.push(`Yukarıdaki bilgileri birleştirerek Suno AI için kısa ama zengin bir tür açıklaması oluştur.`);
+      parts.push(`- Tür kombinasyonu yapabilirsin: "Jazz Rap", "Arabesk Pop", "Rock Ballad" vb.`);
+      parts.push(`- Sanatçı tarzları ekle: "Melike Şahin tarzı indie", "Ceza tarzı rap", "Sezen Aksu tarzı türkü" vb.`);
+      parts.push(`- Alt türleri kullan: "Turkish indie jazz", "conscious rap", "emotional arabesque" vb.`);
+      parts.push(`- Enstrüman detayları ekle uygunsa: "with strings", "acoustic guitar", "heavy drums" vb.`);
+      parts.push(`\n**FORMAT:**`);
+      parts.push(`Sadece tür açıklamasını yaz, başka hiçbir şey ekleme. Maksimum 15-20 kelime, İngilizce.`);
+      parts.push(`\nÖRNEKLER:`);
+      parts.push(`- "Turkish indie jazz with melancholic vocals, Melike Şahin style"`);
+      parts.push(`- "Conscious rap with heavy beats, Ceza and Norm Ender style"`);
+      parts.push(`- "Emotional Turkish arabesque pop with strings"`);
+      parts.push(`- "Nostalgic acoustic folk ballad with gentle guitar"`);
+
+      const requestBody: any = {
+        model: this.model,
+        messages: [
+          {
+            role: 'user',
+            content: parts.join('\n'),
+          },
+        ],
+        max_completion_tokens: 100,
+      };
+
+      if (!this.model.includes('gpt-5')) {
+        requestBody.temperature = 0.7;
+      }
+
+      const response = await this.client.post('/chat/completions', requestBody);
+      const synthesizedGenre = response.data.choices[0]?.message?.content?.trim();
+
+      if (!synthesizedGenre) {
+        // Fallback to basic genre
+        return `${request.songDetails.type} ${request.songDetails.style}`.toLowerCase();
+      }
+
+      console.log('✅ Music genre synthesized:', synthesizedGenre);
+      return synthesizedGenre;
+    } catch (error: any) {
+      console.error('Error synthesizing music genre:', error.message);
+      // Fallback to basic genre on error
+      return `${request.songDetails.type} ${request.songDetails.style}`.toLowerCase();
+    }
+  }
+
+  /**
    * Generic text generation method for conversational AI parsing
    */
   async generateText(prompt: string, options: { temperature?: number; maxTokens?: number } = {}): Promise<string> {

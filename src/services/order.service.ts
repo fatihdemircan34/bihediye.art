@@ -887,17 +887,24 @@ Sipariş numaranız: ${orderId}`
         timestamp: new Date().toISOString(),
       });
 
-      const song1Lyrics = await this.openaiService.generateLyrics({
+      const lyricsRequest = {
         songDetails: order.orderData.song1,
         story: order.orderData.story,
         recipientName: order.orderData.recipientName,
         recipientRelation: order.orderData.recipientRelation,
         includeNameInSong: order.orderData.includeNameInSong,
         notes: order.orderData.notes,
-      });
+      };
+
+      const song1Lyrics = await this.openaiService.generateLyrics(lyricsRequest);
 
       order.song1Lyrics = song1Lyrics;
       await this.firebaseService.updateOrder(orderId, { song1Lyrics });
+
+      // Synthesize music genre for Suno AI V5 (combines type + notes + artist styles)
+      console.log('🎼 Synthesizing music genre for Suno AI V5...');
+      const synthesizedGenre = await this.openaiService.synthesizeMusicGenre(lyricsRequest);
+      console.log('✅ Synthesized genre:', synthesizedGenre);
 
       // Generate music using queue (async) - NO progress update here, queue handles it
       order.status = 'music_generating';
@@ -908,6 +915,7 @@ Sipariş numaranız: ${orderId}`
         orderId,
         phone: order.whatsappPhone,
         songType: order.orderData.song1.type,
+        synthesizedGenre,
         timestamp: new Date().toISOString(),
       });
 
@@ -920,7 +928,7 @@ Sipariş numaranız: ${orderId}`
           songIndex: 1,
           request: {
             lyrics: song1Lyrics,
-            songType: order.orderData.song1.type,
+            songType: synthesizedGenre, // Use synthesized genre instead of basic type
             style: order.orderData.song1.style,
             vocal: order.orderData.song1.vocal,
           },

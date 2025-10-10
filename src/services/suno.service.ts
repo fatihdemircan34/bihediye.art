@@ -70,6 +70,10 @@ export class SunoService {
       console.log('   Lyrics length:', request.lyrics.length);
       console.log('   Vocal:', vocalGender);
 
+      // Get base URL from environment or use default
+      const baseUrl = process.env.BASE_URL || 'https://payment.bihediye.art';
+      const callbackUrl = `${baseUrl}/webhook/suno/callback`;
+
       const response = await this.client.post('/api/v1/generate', {
         model: 'V5',
         customMode: true,
@@ -78,6 +82,7 @@ export class SunoService {
         title: this.generateTitle(request),
         instrumental: false,     // We want vocals with lyrics
         vocalGender: vocalGender,
+        callBackUrl: callbackUrl, // Required by Suno API
       });
 
       console.log('✅ Suno API response received');
