@@ -1,11 +1,14 @@
 import * as admin from 'firebase-admin';
 import { Order } from '../models/order.model';
 import { ConversationState } from './order.service';
+import { GA4Service } from './ga4.service';
+import { config } from '../config/config';
 
 export class FirebaseService {
   private db: admin.firestore.Firestore;
   private storage: admin.storage.Storage;
   private bucket: any;
+  private ga4?: GA4Service;
 
   // Collection names with bihediye_ prefix
   private readonly COLLECTIONS = {
@@ -37,6 +40,14 @@ export class FirebaseService {
       this.bucket = this.storage.bucket();
       console.log('✅ Firebase initialized successfully');
       console.log('✅ Firebase Storage bucket:', this.bucket.name);
+
+      // Initialize GA4 if credentials are provided
+      if (config.ga4.measurementId && config.ga4.apiSecret) {
+        this.ga4 = new GA4Service(config.ga4.measurementId, config.ga4.apiSecret);
+        console.log('✅ GA4 Analytics initialized');
+      } else {
+        console.log('⚠️  GA4 Analytics not configured (optional)');
+      }
     } catch (error: any) {
       console.error('❌ Firebase initialization error:', error.message);
       throw error;
@@ -281,11 +292,15 @@ export class FirebaseService {
   async logAnalytics(event: string, data: any): Promise<void> {
     try {
       console.log(`📊 Logging analytics event: ${event}`, data);
-      await this.db.collection(this.COLLECTIONS.ANALYTICS).add({
-        event,
-        data,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      });
+
+      // Use GA4 if configured (FREE & UNLIMITED)
+      if (this.ga4) {
+        const userId = data.phone || data.orderId;
+        await this.ga4.logEvent(event, data, userId);
+      } else {
+        console.log('⚠️  GA4 not configured, analytics not sent');
+      }
+
       console.log(`✅ Analytics event logged successfully: ${event}`);
     } catch (error) {
       console.error('❌ Error logging analytics:', error);

@@ -44,6 +44,12 @@ export const config = {
   pricing: {
     songBasePrice: parseInt(process.env.SONG_BASE_PRICE || '350', 10),
   },
+
+  // Google Analytics 4 Configuration
+  ga4: {
+    measurementId: process.env.GA4_MEASUREMENT_ID || '',
+    apiSecret: process.env.GA4_API_SECRET || '',
+  },
 };
 
 export const validateConfig = (): void => {
