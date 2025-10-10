@@ -262,4 +262,40 @@ export class OpenAIService {
       throw new Error(`Video prompt oluşturma hatası: ${error.response?.data?.error?.message || error.message}`);
     }
   }
+
+  /**
+   * Generic text generation method for conversational AI parsing
+   */
+  async generateText(prompt: string, options: { temperature?: number; maxTokens?: number } = {}): Promise<string> {
+    try {
+      const requestBody: any = {
+        model: this.model,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        max_completion_tokens: options.maxTokens || 500,
+      };
+
+      // Only add temperature for models that support it (not gpt-5)
+      if (!this.model.includes('gpt-5') && options.temperature !== undefined) {
+        requestBody.temperature = options.temperature;
+      }
+
+      const response = await this.client.post('/chat/completions', requestBody);
+
+      const text = response.data.choices[0]?.message?.content?.trim();
+
+      if (!text) {
+        throw new Error('OpenAI boş yanıt döndürdü');
+      }
+
+      return text;
+    } catch (error: any) {
+      console.error('Error generating text:', error.response?.data || error.message);
+      throw new Error(`Metin oluşturma hatası: ${error.response?.data?.error?.message || error.message}`);
+    }
+  }
 }
