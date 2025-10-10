@@ -160,7 +160,7 @@ class App {
     }
 
     // Admin panel routes
-    const adminRouter = createAdminRouter(this.orderService, this.discountService);
+    const adminRouter = createAdminRouter(this.orderService, this.discountService, this.whatsappService);
     this.app.use('/admin', adminRouter);
     console.log('✅ Admin panel initialized (/admin)');
 

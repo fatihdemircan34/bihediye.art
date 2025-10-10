@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { OrderService } from '../services/order.service';
 import { DiscountService } from '../services/discount.service';
+import { WhatsAppService } from '../services/whatsapp.service';
 import { config } from '../config/config';
 
 /**
@@ -30,7 +31,8 @@ function authenticate(req: Request, res: Response, next: Function) {
 
 export function createAdminRouter(
   orderService: OrderService,
-  discountService: DiscountService
+  discountService: DiscountService,
+  whatsappService: WhatsAppService
 ): Router {
   const router = Router();
 
@@ -468,9 +470,13 @@ export function createAdminRouter(
         return;
       }
 
-      // WhatsApp service'den import etmek yerine orderService üzerinden erişelim
-      // Bu yüzden orderService'e bir helper metod ekleyeceğiz
-      // Şimdilik basit bir çözüm olarak, admin router'a whatsappService'i de geçmemiz gerekiyor
+      // WhatsApp mesajını gönder
+      try {
+        await whatsappService.sendTextMessage(phone, message);
+        console.log(`✅ Admin mesajı gönderildi: ${phone}`);
+      } catch (error: any) {
+        console.error(`❌ Mesaj gönderilemedi: ${error.message}`);
+      }
 
       res.send(`
         <!DOCTYPE html>
@@ -516,8 +522,6 @@ export function createAdminRouter(
         </html>
       `);
 
-      // TODO: WhatsApp mesajını gönder
-      console.log(`📤 Admin mesaj gönderiyor: ${phone} - ${message}`);
     } catch (error: any) {
       res.status(500).send('Hata: ' + error.message);
     }
@@ -682,10 +686,13 @@ bihediye.art - Yapay zeka ile özel şarkı hediyesi 🎵</textarea>
         .replace(/\[KOD\]/g, discountCode.code)
         .replace(/\[İNDİRİM\]/g, discount);
 
-      // TODO: WhatsApp mesajını gönder
-      console.log(`📤 Admin indirim mesajı gönderiyor: ${phone}`);
-      console.log(`   Kod: ${discountCode.code}`);
-      console.log(`   Mesaj: ${finalMessage}`);
+      // WhatsApp mesajını gönder
+      try {
+        await whatsappService.sendTextMessage(phone, finalMessage);
+        console.log(`✅ İndirim mesajı gönderildi: ${phone} - Kod: ${discountCode.code}`);
+      } catch (error: any) {
+        console.error(`❌ İndirim mesajı gönderilemedi: ${error.message}`);
+      }
 
       res.send(`
         <!DOCTYPE html>
