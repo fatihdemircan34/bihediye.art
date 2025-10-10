@@ -8,6 +8,23 @@ export class AIConversationService {
   constructor(private openaiService: OpenAIService) {}
 
   /**
+   * Clean AI response and extract JSON
+   */
+  private cleanAndParseJSON(rawResponse: string): any {
+    let cleanResult = rawResponse.trim();
+
+    // Remove markdown code blocks
+    if (cleanResult.startsWith('```json')) {
+      cleanResult = cleanResult.replace(/```json\n?/g, '').replace(/```\n?$/g, '');
+    } else if (cleanResult.startsWith('```')) {
+      cleanResult = cleanResult.replace(/```\n?/g, '');
+    }
+
+    cleanResult = cleanResult.trim();
+    return JSON.parse(cleanResult);
+  }
+
+  /**
    * Parse user message and extract song type selection
    */
   async parseSongType(userMessage: string): Promise<{ type: 'Pop' | 'Rap' | 'Jazz' | 'Arabesk' | 'Klasik' | 'Rock' | 'Metal' | 'Nostaljik' | null; response: string }> {
@@ -40,7 +57,8 @@ Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
       console.log('AI parseSongType raw result:', result);
-      const parsed = JSON.parse(result);
+
+      const parsed = this.cleanAndParseJSON(result);
       console.log('AI parseSongType parsed:', parsed);
       return parsed;
     } catch (error) {
@@ -62,20 +80,36 @@ Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini 
 
 Müsait tarzlar: Romantik, Duygusal, Eğlenceli, Sakin
 
+Görevin:
+1. Kullanıcının mesajından tarzı anlamaya çalış
+2. Eğer net bir tarz belirtmişse, o tarzı döndür
+3. Eğer anlaşılmıyorsa, null döndür ve nazikçe seçenekleri hatırlat
+
+KURALLAR:
+- "style" değeri MUTLAKA yukarıdaki tarzlardan TAM OLARAK biri olmalı (Romantik, Duygusal, Eğlenceli, Sakin)
+- Kullanıcı "romantik bir şey", "romantik tarz" yazabilir - hepsini "Romantik" olarak algıla
+- Esneklik göster ama sonuçta tam eşleşme döndür
+
 JSON formatında cevap ver:
 {
-  "style": "Romantik" veya null,
-  "response": "Kullanıcıya gönderilecek sıcak mesaj"
-}`;
+  "style": "Romantik" (veya başka bir tarz) veya null,
+  "response": "Kullanıcıya gönderilecek sıcak, samimi mesaj"
+}
+
+Eğer style null ise, response'da şöyle bir mesaj ver:
+"Hangi tarzı tercih edersiniz? 😊
+
+Romantik, Duygusal, Eğlenceli veya Sakin tarzlarından birini seçebilirsiniz!"`;
 
     try {
-      const result = await this.openaiService.generateText(prompt, { temperature: 0.7 });
-      const parsed = JSON.parse(result);
-      return parsed;
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      return this.cleanAndParseJSON(result);
     } catch (error) {
       return {
         style: null,
-        response: '❌ Hangi tarzı tercih edersiniz? Romantik, Duygusal, Eğlenceli veya Sakin?',
+        response: `Hangi tarzı tercih edersiniz? 😊
+
+Romantik, Duygusal, Eğlenceli veya Sakin tarzlarından birini seçebilirsiniz!`,
       };
     }
   }
@@ -88,20 +122,37 @@ JSON formatında cevap ver:
 
 Seçenekler: Kadın, Erkek, Fark etmez
 
+Görevin:
+1. Kullanıcının mesajından vokal tercihini anla
+2. Eğer net bir tercih belirtmişse, onu döndür
+3. Eğer anlaşılmıyorsa, null döndür
+
+KURALLAR:
+- "vocal" değeri MUTLAKA: "Kadın", "Erkek" veya "Fark etmez" olmalı
+- Kullanıcı "kadın sesi", "bayan", "kız" yazabilir - hepsini "Kadın" olarak algıla
+- "erkek sesi", "bay" → "Erkek"
+- "farketmez", "fark etmez", "önemli değil" → "Fark etmez"
+
 JSON formatında cevap ver:
 {
-  "vocal": "Kadın" veya "Erkek" veya "Fark etmez" veya null,
-  "response": "Kullanıcıya gönderilecek mesaj"
-}`;
+  "vocal": "Kadın" (veya diğer seçenekler) veya null,
+  "response": "Kullanıcıya gönderilecek sıcak mesaj"
+}
+
+Eğer vocal null ise, response'da:
+"Şarkıyı hangi seste dinlemek istersiniz? 😊
+
+Kadın sesi, Erkek sesi veya Fark etmez diyebilirsiniz!"`;
 
     try {
-      const result = await this.openaiService.generateText(prompt, { temperature: 0.7 });
-      const parsed = JSON.parse(result);
-      return parsed;
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      return this.cleanAndParseJSON(result);
     } catch (error) {
       return {
         vocal: null,
-        response: '❌ Vokal tercihiniz nedir? Kadın sesi mi, Erkek sesi mi, yoksa Fark etmez mi?',
+        response: `Şarkıyı hangi seste dinlemek istersiniz? 😊
+
+Kadın sesi, Erkek sesi veya Fark etmez diyebilirsiniz!`,
       };
     }
   }
@@ -112,24 +163,33 @@ JSON formatında cevap ver:
   async parseRecipientRelation(userMessage: string): Promise<{ relation: string | null; response: string }> {
     const prompt = `Kullanıcı hediye edeceği kişinin kim olduğunu söylüyor. Mesajı: "${userMessage}"
 
-Örnekler: Annem, Babam, Sevgilim, Eşim, Arkadaşım, Kardeşim
+Örnekler: Annem, Babam, Sevgilim, Eşim, Arkadaşım, Kardeşim, vb.
 
-Kullanıcının mesajından ilişkiyi çıkar ve samimi bir onay mesajı yaz.
+Görevin:
+1. Kullanıcının mesajından ilişkiyi (kim olduğunu) çıkar
+2. Samimi ve sıcak bir onay mesajı yaz
+3. Eğer anlaşılmıyorsa null döndür
 
 JSON formatında cevap ver:
 {
-  "relation": "çıkarılan ilişki" veya null,
-  "response": "Onay mesajı ve sonraki soru"
-}`;
+  "relation": "çıkarılan ilişki (örn: Sevgilim, Annem)" veya null,
+  "response": "Samimi onay mesajı"
+}
+
+Eğer relation null ise, response'da:
+"Bu şarkıyı hediye edeceğiniz kişi sizin neyiniz? 😊
+
+Örneğin: Annem, Sevgilim, En yakın arkadaşım gibi..."`;
 
     try {
-      const result = await this.openaiService.generateText(prompt, { temperature: 0.7 });
-      const parsed = JSON.parse(result);
-      return parsed;
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.5 });
+      return this.cleanAndParseJSON(result);
     } catch (error) {
       return {
         relation: null,
-        response: '❌ Bu hediye kime? Örneğin: Annem, Sevgilim, Arkadaşım gibi...',
+        response: `Bu şarkıyı hediye edeceğiniz kişi sizin neyiniz? 😊
+
+Örneğin: Annem, Sevgilim, En yakın arkadaşım gibi...`,
       };
     }
   }
@@ -142,20 +202,36 @@ JSON formatında cevap ver:
 
 Evet mi diyor, Hayır mı?
 
+Görevin:
+1. Kullanıcı "evet" diyorsa → true döndür
+2. Kullanıcı "hayır" diyorsa → false döndür
+3. Anlaşılmıyorsa → null döndür
+
+KURALLAR:
+- "evet", "olsun", "geçsin", "istiyorum" → true
+- "hayır", "hayir", "gerek yok", "istemiyorum" → false
+- Samimi ve sıcak mesaj yaz
+
 JSON formatında cevap ver:
 {
-  "answer": true (evet) veya false (hayır) veya null (emin değil),
-  "response": "Mesaj"
-}`;
+  "answer": true veya false veya null,
+  "response": "Samimi onay veya açıklama mesajı"
+}
+
+Eğer answer null ise:
+"Şarkıda hediye edeceğiniz kişinin ismi geçsin mi? 😊
+
+Evet veya Hayır yazabilirsiniz!"`;
 
     try {
-      const result = await this.openaiService.generateText(prompt, { temperature: 0.5 });
-      const parsed = JSON.parse(result);
-      return parsed;
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      return this.cleanAndParseJSON(result);
     } catch (error) {
       return {
         answer: null,
-        response: '❌ Şarkıda hediye edeceğiniz kişinin ismi geçsin mi? Evet veya Hayır yazın.',
+        response: `Şarkıda hediye edeceğiniz kişinin ismi geçsin mi? 😊
+
+Evet veya Hayır yazabilirsiniz!`,
       };
     }
   }
@@ -166,22 +242,35 @@ JSON formatında cevap ver:
   async parseRecipientName(userMessage: string): Promise<{ name: string | null; response: string }> {
     const prompt = `Kullanıcı hediye edeceği kişinin ismini söylüyor. Mesajı: "${userMessage}"
 
-İsmi çıkar ve samimi bir onay mesajı yaz.
+Görevin:
+1. Mesajdan ismi çıkar (genellikle tek kelime veya iki kelime)
+2. Samimi ve sıcak bir onay mesajı yaz
+3. Eğer isim yoksa veya anlamsızsa null döndür
+
+KURALLAR:
+- Sadece ismi al (örn: "Ahmet", "Ayşe", "Mehmet Ali")
+- Gereksiz kelimeleri atla (örn: "İsmi Ahmet" → "Ahmet")
 
 JSON formatında cevap ver:
 {
-  "name": "isim" veya null,
-  "response": "Onay mesajı"
-}`;
+  "name": "temiz isim" veya null,
+  "response": "Samimi onay mesajı (örn: 'Harika! Ahmet için özel bir şarkı hazırlayacağız 💝')"
+}
+
+Eğer name null ise:
+"Hediye edeceğiniz kişinin adı nedir? 😊
+
+İsmini yazabilirsiniz:"`;
 
     try {
-      const result = await this.openaiService.generateText(prompt, { temperature: 0.5 });
-      const parsed = JSON.parse(result);
-      return parsed;
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      return this.cleanAndParseJSON(result);
     } catch (error) {
       return {
         name: null,
-        response: '❌ Hediye edeceğiniz kişinin ismini yazın lütfen.',
+        response: `Hediye edeceğiniz kişinin adı nedir? 😊
+
+İsmini yazabilirsiniz:`,
       };
     }
   }
@@ -193,35 +282,43 @@ JSON formatında cevap ver:
     if (userMessage.length > 900) {
       return {
         isValid: false,
-        response: '❌ Hikaye çok uzun oldu. Lütfen 900 karakteri geçmeyecek şekilde özetleyin.',
+        response: `Hikayeniz çok uzun oldu 😊
+
+Lütfen 900 karakteri geçmeyecek şekilde özetleyebilir misiniz? Şu anda ${userMessage.length} karakter.`,
       };
     }
 
     if (userMessage.length < 20) {
       return {
         isValid: false,
-        response: '❌ Biraz daha detay verebilir misiniz? En az birkaç cümle yazın lütfen.',
+        response: `Biraz daha detay verebilir misiniz? 😊
+
+Şarkının özel olması için duygularınızı, anılarınızı paylaşın. En az birkaç cümle yazmanız yeterli!`,
       };
     }
 
     const prompt = `Kullanıcı şarkı için hikaye yazdı. Hikaye: "${userMessage}"
 
-Bu hikaye şarkı sözü yazmak için uygun mu? Duygusal içerik var mı?
+Bu hikaye şarkı sözü yazmak için uygun mu? Duygusal içerik var mı? Yeterli detay var mı?
+
+Görevin:
+1. Eğer hikaye uygunsa ve duygusal içerik varsa → isValid: true
+2. Eğer çok genel, anlamsız veya içerik yoksa → isValid: false
+3. Samimi ve sıcak bir mesaj yaz
 
 JSON formatında cevap ver:
 {
   "isValid": true veya false,
-  "response": "Samimi onay mesajı veya iyileştirme önerisi"
+  "response": "Samimi onay mesajı (örn: 'Harika! Çok güzel bir hikaye 💝 Bundan muhteşem bir şarkı çıkacak!')"
 }`;
 
     try {
-      const result = await this.openaiService.generateText(prompt, { temperature: 0.7 });
-      const parsed = JSON.parse(result);
-      return parsed;
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.5 });
+      return this.cleanAndParseJSON(result);
     } catch (error) {
       return {
         isValid: true,
-        response: '✅ Teşekkürler! Hikayenizi aldık.',
+        response: '✅ Teşekkürler! Hikayenizi aldık 💝',
       };
     }
   }
