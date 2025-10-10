@@ -364,7 +364,7 @@ Onaylıyor musunuz?
    */
   private async createOrderAndSendPaymentLink(conversation: ConversationState): Promise<void> {
     try {
-      const orderId = uuidv4();
+      const orderId = uuidv4().replace(/-/g, ''); // Remove hyphens for PayTR compatibility
       const orderRequest: OrderRequest = conversation.data as OrderRequest;
       orderRequest.phone = conversation.phone;
 
@@ -552,7 +552,7 @@ Sipariş numaranız: ${orderId}`
    */
   private async createOrderFromConversation(conversation: ConversationState): Promise<void> {
     try {
-      const orderId = uuidv4();
+      const orderId = uuidv4().replace(/-/g, ''); // Remove hyphens for PayTR compatibility
       const orderRequest: OrderRequest = conversation.data as OrderRequest;
       orderRequest.phone = conversation.phone;
 

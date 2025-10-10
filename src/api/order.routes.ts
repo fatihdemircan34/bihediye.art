@@ -53,7 +53,7 @@ export class OrderRoutes {
       // Calculate pricing
       const pricing = this.calculatePricing(orderRequest);
 
-      const orderId = uuidv4();
+      const orderId = uuidv4().replace(/-/g, ''); // Remove hyphens for PayTR compatibility
       const order: Order = {
         id: orderId,
         whatsappPhone: WhatsAppService.formatPhoneNumber(whatsappPhone || orderRequest.phone),
