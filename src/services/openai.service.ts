@@ -364,6 +364,90 @@ export class OpenAIService {
   }
 
   /**
+   * Analyze lyrics and identify potentially sensitive words
+   * Returns analysis with flagged words
+   */
+  async analyzeLyricsForSensitiveContent(lyrics: string): Promise<{
+    hasSensitiveWords: boolean;
+    flaggedWords: string[];
+    suggestions: string;
+  }> {
+    try {
+      const analysisPrompt = `Sen bir içerik moderasyon uzmanısın. Aşağıdaki şarkı sözlerini analiz et ve müzik platformları tarafından hassas olarak kabul edilebilecek kelimeleri tespit et.
+
+ŞARKI SÖZLERİ:
+${lyrics}
+
+ÖNEMLİ: Aşağıdaki kategorilerdeki kelimeleri tespit et:
+- Şiddet, silah, kavga, savaş
+- Alkol, içki, sarhoşluk
+- Uyuşturucu, sigara
+- Cinsellik, romantik olmayan cinsel içerik
+- Argo, küfür
+- Ölüm, intihar, keder
+- Siyasi, dini referanslar
+
+JSON formatında yanıt ver:
+{
+  "hasSensitiveWords": true/false,
+  "flaggedWords": ["kelime1", "kelime2"],
+  "suggestions": "Bu kelimeleri şöyle değiştirebilirsin..."
+}`;
+
+      const response = await this.generateText(analysisPrompt, { temperature: 0.3, maxTokens: 500 });
+
+      // Parse JSON response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const analysis = JSON.parse(jsonMatch[0]);
+        return analysis;
+      }
+
+      // Fallback
+      return {
+        hasSensitiveWords: false,
+        flaggedWords: [],
+        suggestions: '',
+      };
+    } catch (error: any) {
+      console.error('Error analyzing lyrics:', error.message);
+      return {
+        hasSensitiveWords: false,
+        flaggedWords: [],
+        suggestions: '',
+      };
+    }
+  }
+
+  /**
+   * Clean lyrics by removing sensitive words
+   */
+  async cleanLyrics(lyrics: string, flaggedWords: string[]): Promise<string> {
+    try {
+      const cleaningPrompt = `Sen profesyonel bir şarkı sözü editörüsün. Aşağıdaki şarkı sözlerinden hassas kelimeleri çıkar ve yerine uygun alternatifler koy.
+
+ŞARKI SÖZLERİ:
+${lyrics}
+
+HASSASİYET TESPİT EDİLEN KELİMELER:
+${flaggedWords.join(', ')}
+
+GÖREV:
+1. Bu kelimeleri şarkının anlamını bozmadan değiştir
+2. Şarkı akışını ve kafiyeyi koru
+3. Pozitif, temiz alternatifler kullan
+4. Format etiketlerini ([intro], [verse], vb.) koru
+
+Sadece temizlenmiş şarkı sözlerini döndür, başka açıklama yapma.`;
+
+      return await this.generateText(cleaningPrompt, { temperature: 0.7, maxTokens: 2000 });
+    } catch (error: any) {
+      console.error('Error cleaning lyrics:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Generic text generation method for conversational AI parsing
    */
   async generateText(prompt: string, options: { temperature?: number; maxTokens?: number } = {}): Promise<string> {

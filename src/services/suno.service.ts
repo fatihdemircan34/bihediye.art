@@ -184,6 +184,18 @@ export class SunoService {
         // SENSITIVE_WORD_ERROR - content moderation issue
         if (status === 'SENSITIVE_WORD_ERROR') {
           console.error('❌ Suno content moderation error: Lyrics contain sensitive words');
+          console.error('📋 Full Suno response data:', JSON.stringify(taskData, null, 2));
+
+          // Check if Suno provides details about which word was flagged
+          if (taskData.error_message || taskData.error || taskData.message || taskData.fail_reason) {
+            console.error('🔍 Error details:', {
+              error_message: taskData.error_message,
+              error: taskData.error,
+              message: taskData.message,
+              fail_reason: taskData.fail_reason,
+            });
+          }
+
           return {
             task_id: taskId,
             status: 'Failed',

@@ -212,25 +212,48 @@ export class FirebaseQueueService {
 
             if (contentRetries < this.MAX_CONTENT_MODERATION_RETRIES) {
               // Regenerate lyrics with stricter content filtering
-              console.log(`🔄 Regenerating lyrics with stricter filtering (attempt ${contentRetries + 1}/${this.MAX_CONTENT_MODERATION_RETRIES})`);
+              console.log(`🔄 Fixing lyrics with content moderation (attempt ${contentRetries + 1}/${this.MAX_CONTENT_MODERATION_RETRIES})`);
 
               const order = await this.firebaseService.getOrder(orderId);
               if (!order) {
                 throw new Error('Order not found');
               }
 
-              const lyricsRequest = {
-                songDetails: order.orderData.song1,
-                story: order.orderData.story,
-                recipientName: order.orderData.recipientName,
-                recipientRelation: order.orderData.recipientRelation,
-                includeNameInSong: order.orderData.includeNameInSong,
-                notes: order.orderData.notes,
-              };
+              const currentLyrics = job.request.lyrics;
 
-              // Generate new lyrics with stricter content moderation
-              const newLyrics = await this.openaiService.generateLyrics(lyricsRequest, true);
-              console.log(`✅ New safe lyrics generated (length: ${newLyrics.length})`);
+              // Analyze current lyrics to find sensitive words
+              console.log('🔍 Analyzing lyrics for sensitive content...');
+              const analysis = await this.openaiService.analyzeLyricsForSensitiveContent(currentLyrics);
+
+              console.log('📊 Content analysis result:', {
+                hasSensitiveWords: analysis.hasSensitiveWords,
+                flaggedWords: analysis.flaggedWords,
+                suggestions: analysis.suggestions,
+              });
+
+              let newLyrics: string;
+
+              if (analysis.hasSensitiveWords && analysis.flaggedWords.length > 0) {
+                // Clean the existing lyrics by replacing sensitive words/sentences
+                console.log(`🧹 Cleaning lyrics - removing ${analysis.flaggedWords.length} sensitive words/phrases`);
+                newLyrics = await this.openaiService.cleanLyrics(currentLyrics, analysis.flaggedWords);
+                console.log(`✅ Lyrics cleaned (flagged: ${analysis.flaggedWords.join(', ')})`);
+              } else {
+                // If we can't identify specific words, regenerate with ultra-strict filter
+                console.log('⚠️ Could not identify specific words, regenerating with ultra-strict filter');
+
+                const lyricsRequest = {
+                  songDetails: order.orderData.song1,
+                  story: order.orderData.story,
+                  recipientName: order.orderData.recipientName,
+                  recipientRelation: order.orderData.recipientRelation,
+                  includeNameInSong: order.orderData.includeNameInSong,
+                  notes: order.orderData.notes,
+                };
+
+                newLyrics = await this.openaiService.generateLyrics(lyricsRequest, true);
+                console.log(`✅ New ultra-safe lyrics generated (length: ${newLyrics.length})`);
+              }
 
               // Update order with new lyrics
               await this.firebaseService.updateOrder(orderId, { song1Lyrics: newLyrics });
