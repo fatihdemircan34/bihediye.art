@@ -86,17 +86,21 @@ class App {
     console.log('✅ Firebase Queue service initialized - async mode enabled');
 
     // Initialize PayTR service (if credentials provided)
-    if (process.env.PAYTR_MERCHANT_ID && process.env.PAYTR_MERCHANT_ID !== 'your_merchant_id') {
+    if (config.paytr.merchantId && config.paytr.merchantId !== 'your_merchant_id') {
       this.paytrService = new PaytrService({
-        merchantId: process.env.PAYTR_MERCHANT_ID,
-        merchantKey: process.env.PAYTR_MERCHANT_KEY!,
-        merchantSalt: process.env.PAYTR_MERCHANT_SALT!,
-        testMode: process.env.PAYTR_TEST_MODE === '1',
+        merchantId: config.paytr.merchantId,
+        merchantKey: config.paytr.merchantKey,
+        merchantSalt: config.paytr.merchantSalt,
+        testMode: config.paytr.testMode,
       });
       console.log('✅ PayTR service initialized (payment gateway enabled)');
+      console.log(`   Merchant ID: ${config.paytr.merchantId}`);
+      console.log(`   Test Mode: ${config.paytr.testMode}`);
+      console.log(`   Base URL: ${config.paytr.baseUrl}`);
     } else {
       console.warn('⚠️  PayTR credentials not configured - payment gateway disabled');
       console.warn('   Orders will be processed without payment');
+      console.warn('   Set PAYTR_MERCHANT_ID, PAYTR_MERCHANT_KEY, PAYTR_MERCHANT_SALT in .env');
     }
 
     // Initialize Order service (manages conversations and orders)

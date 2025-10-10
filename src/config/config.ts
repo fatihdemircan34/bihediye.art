@@ -30,6 +30,15 @@ export const config = {
   firebase: {
     serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(process.cwd(), 'serviceAccount.json'),
   },
+
+  // PayTR Payment Gateway Configuration
+  paytr: {
+    merchantId: process.env.PAYTR_MERCHANT_ID || '',
+    merchantKey: process.env.PAYTR_MERCHANT_KEY || '',
+    merchantSalt: process.env.PAYTR_MERCHANT_SALT || '',
+    testMode: process.env.PAYTR_TEST_MODE === '1',
+    baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+  },
 };
 
 export const validateConfig = (): void => {

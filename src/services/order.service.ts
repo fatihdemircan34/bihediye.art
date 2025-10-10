@@ -399,15 +399,25 @@ Onaylıyor musunuz?
       if (this.paytrService) {
         await this.sendPaymentLink(order);
       } else {
-        // Fallback: No payment required (test mode)
-        console.warn('⚠️ PayTR service not configured - processing without payment');
-        await this.whatsappService.sendOrderConfirmation(
+        // PayTR not configured - inform user
+        console.error('❌ PayTR service not configured - cannot process payment');
+        await this.whatsappService.sendTextMessage(
           conversation.phone,
-          orderId,
-          order.totalPrice,
-          order.estimatedDelivery
+          `❌ *Ödeme Sistemi Aktif Değil*
+
+Şu anda ödeme altyapımız yapılandırılmamış durumda.
+
+Lütfen daha sonra tekrar deneyin veya destek ile iletişime geçin:
+📧 support@bihediye.art
+
+Sipariş numaranız: ${orderId}`
         );
-        this.processOrder(orderId);
+
+        // Cancel the order
+        await this.firebaseService.updateOrder(orderId, {
+          status: 'failed',
+          errorMessage: 'Payment system not configured',
+        });
       }
 
       // Clean up conversation after 5 seconds
@@ -433,7 +443,7 @@ Onaylıyor musunuz?
         throw new Error('PayTR service not configured');
       }
 
-      const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+      const baseUrl = process.env.BASE_URL || 'https://bihediye.art';
 
       // Ödeme token oluştur
       const tokenResponse = await this.paytrService.createPaymentToken(
