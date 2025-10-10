@@ -39,6 +39,12 @@ export class FirebaseService {
       }
 
       this.db = admin.firestore();
+
+      // Configure Firestore to ignore undefined values
+      this.db.settings({
+        ignoreUndefinedProperties: true,
+      });
+
       this.storage = admin.storage();
       this.bucket = this.storage.bucket();
       console.log('✅ Firebase initialized successfully');

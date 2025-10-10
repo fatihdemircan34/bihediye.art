@@ -9,7 +9,7 @@ export const config = {
 
   // Suno AI Configuration
   suno: {
-    apiKey: process.env.SUNO_API_KEY || '7ad751d26f4c84ea7e24b4b67af3c813',
+    apiKey: process.env.SUNO_API_KEY || '',
     baseUrl: process.env.SUNO_BASE_URL || 'https://api.sunoapi.org',
   },
 
