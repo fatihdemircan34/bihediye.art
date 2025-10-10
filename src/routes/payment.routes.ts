@@ -337,126 +337,59 @@ export function createPaymentRouter(
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              background: #667eea;
+            }
+            .container {
+              width: 100%;
+              height: 100vh;
               display: flex;
               flex-direction: column;
             }
-            .header {
-              text-align: center;
-              color: white;
-              padding: 15px 20px;
-              flex-shrink: 0;
-            }
-            .header h1 {
-              font-size: 28px;
-              margin-bottom: 5px;
-            }
-            .header p {
-              font-size: 14px;
-              opacity: 0.9;
-            }
-            .order-info {
-              background: rgba(255,255,255,0.95);
-              padding: 15px 20px;
-              margin: 0 20px 15px 20px;
-              border-radius: 10px;
-              box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-              flex-shrink: 0;
-            }
-            .order-info h2 {
-              font-size: 16px;
-              color: #333;
-              margin-bottom: 10px;
-            }
-            .order-detail {
+            .top-bar {
+              background: rgba(255,255,255,0.15);
+              backdrop-filter: blur(10px);
+              padding: 8px 15px;
               display: flex;
               justify-content: space-between;
-              padding: 8px 0;
-              border-bottom: 1px solid #eee;
-              font-size: 14px;
+              align-items: center;
+              color: white;
+              font-size: 12px;
+              flex-shrink: 0;
             }
-            .order-detail:last-child {
-              border-bottom: none;
-              font-weight: bold;
-              font-size: 16px;
-              color: #667eea;
+            .top-bar .left {
+              font-weight: 600;
+            }
+            .top-bar .right {
+              opacity: 0.9;
             }
             .payment-container {
-              background: white;
-              border-radius: 15px 15px 0 0;
-              padding: 10px;
-              margin: 0 20px;
-              box-shadow: 0 -5px 20px rgba(0,0,0,0.2);
               flex: 1;
-              display: flex;
-              flex-direction: column;
-              min-height: 0;
+              background: white;
+              overflow: hidden;
             }
             iframe {
               width: 100%;
-              flex: 1;
+              height: 100%;
               border: none;
-              border-radius: 10px;
-              min-height: 500px;
-            }
-            .footer {
-              padding: 10px 20px;
-              text-align: center;
-              color: rgba(255,255,255,0.9);
-              font-size: 12px;
-              flex-shrink: 0;
-              background: rgba(0,0,0,0.1);
             }
             @media (max-width: 768px) {
-              .header h1 {
-                font-size: 22px;
-              }
-              .header p {
-                font-size: 12px;
-              }
-              .order-info {
-                margin: 0 10px 10px 10px;
-                padding: 12px 15px;
-              }
-              .payment-container {
-                margin: 0 10px;
-                padding: 8px;
-              }
-              iframe {
-                min-height: 400px;
+              .top-bar {
+                font-size: 11px;
+                padding: 6px 12px;
               }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>🎵 bihediye.art</h1>
-            <p>Güvenli Ödeme Sayfası</p>
-          </div>
-
-          <div class="order-info">
-            <h2>📋 Sipariş Özeti</h2>
-            <div class="order-detail">
-              <span>Sipariş No:</span>
-              <span>${order.id.substring(0, 8)}...</span>
+          <div class="container">
+            <div class="top-bar">
+              <div class="left">🎵 bihediye.art - ${order.orderData.song1.type} Şarkı (${order.totalPrice} TL)</div>
+              <div class="right">🔒 PayTR Güvenli Ödeme</div>
             </div>
-            <div class="order-detail">
-              <span>Ürün:</span>
-              <span>${order.orderData.song1.type} Şarkı Hediyesi</span>
-            </div>
-            <div class="order-detail">
-              <span>Toplam Tutar:</span>
-              <span>${order.totalPrice} TL</span>
-            </div>
-          </div>
 
-          <div class="payment-container">
-            <iframe src="${iframeUrl}" id="paytriframe"></iframe>
-          </div>
-
-          <div class="footer">
-            <p>🔒 Ödeme bilgileriniz PayTR güvencesi altındadır</p>
-            <p>Ödeme tamamlandıktan sonra WhatsApp'tan bilgilendirileceksiniz</p>
+            <div class="payment-container">
+              <iframe src="${iframeUrl}" id="paytriframe"></iframe>
+            </div>
           </div>
 
           <script>
