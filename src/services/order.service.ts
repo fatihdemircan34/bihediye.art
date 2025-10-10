@@ -5,6 +5,7 @@ import { OpenAIService } from './openai.service';
 import { WhatsAppService } from './whatsapp.service';
 import { FirebaseService } from './firebase.service';
 import { FirebaseQueueService } from './firebase-queue.service';
+import { PaytrService } from './paytr.service';
 
 /**
  * Conversation state for collecting order information via WhatsApp
@@ -31,15 +32,18 @@ export interface ConversationState {
 
 export class OrderService {
   private queueService?: FirebaseQueueService;
+  private paytrService?: PaytrService;
 
   constructor(
     private minimaxService: MinimaxService,
     private openaiService: OpenAIService,
     private whatsappService: WhatsAppService,
     private firebaseService: FirebaseService,
-    queueService?: FirebaseQueueService
+    queueService?: FirebaseQueueService,
+    paytrService?: PaytrService
   ) {
     this.queueService = queueService;
+    this.paytrService = paytrService;
     // Start cleanup job for old conversations
     this.startCleanupJob();
   }
@@ -286,9 +290,9 @@ Yoksa "hayır" yazın.`
 
       case 'confirm':
         if (message === '1') {
-          await this.createOrderFromConversation(conversation);
+          await this.createOrderAndSendPaymentLink(conversation);
         } else if (message === '2') {
-          this.conversations.delete(from);
+          await this.firebaseService.deleteConversation(from);
           await this.whatsappService.sendTextMessage(
             from,
             '❌ Sipariş iptal edildi. Yeni sipariş için "merhaba" yazın.'
@@ -356,7 +360,185 @@ Onaylıyor musunuz?
   }
 
   /**
-   * Create order from conversation
+   * Create order and send payment link
+   */
+  private async createOrderAndSendPaymentLink(conversation: ConversationState): Promise<void> {
+    try {
+      const orderId = uuidv4();
+      const orderRequest: OrderRequest = conversation.data as OrderRequest;
+      orderRequest.phone = conversation.phone;
+
+      const pricing = this.calculatePriceDetails(orderRequest.deliveryOptions);
+
+      const order: Order = {
+        id: orderId,
+        whatsappPhone: conversation.phone,
+        orderData: orderRequest,
+        status: 'payment_pending', // Ödeme bekliyor
+        basePrice: pricing.basePrice,
+        additionalCosts: pricing.additionalCosts,
+        totalPrice: pricing.totalPrice,
+        createdAt: new Date(),
+        estimatedDelivery: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      };
+
+      // Save order to Firebase
+      await this.firebaseService.saveOrder(order);
+
+      conversation.step = 'processing';
+      await this.firebaseService.saveConversation(conversation);
+
+      // Log analytics
+      await this.firebaseService.logAnalytics('order_created', {
+        orderId,
+        phone: conversation.phone,
+        totalPrice: order.totalPrice,
+      });
+
+      // Generate payment link and send
+      if (this.paytrService) {
+        await this.sendPaymentLink(order);
+      } else {
+        // Fallback: No payment required (test mode)
+        console.warn('⚠️ PayTR service not configured - processing without payment');
+        await this.whatsappService.sendOrderConfirmation(
+          conversation.phone,
+          orderId,
+          order.totalPrice,
+          order.estimatedDelivery
+        );
+        this.processOrder(orderId);
+      }
+
+      // Clean up conversation after 5 seconds
+      setTimeout(async () => {
+        await this.firebaseService.deleteConversation(conversation.phone);
+      }, 5000);
+
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      await this.whatsappService.sendTextMessage(
+        conversation.phone,
+        `❌ Sipariş oluşturulurken hata: ${error.message}`
+      );
+    }
+  }
+
+  /**
+   * Send payment link to customer
+   */
+  private async sendPaymentLink(order: Order): Promise<void> {
+    try {
+      if (!this.paytrService) {
+        throw new Error('PayTR service not configured');
+      }
+
+      const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+
+      // Ödeme token oluştur
+      const tokenResponse = await this.paytrService.createPaymentToken(
+        {
+          orderId: order.id,
+          email: order.orderData.recipientName
+            ? `${order.orderData.recipientName.toLowerCase().replace(/\s/g, '')}@bihediye.art`
+            : 'customer@bihediye.art',
+          amount: order.totalPrice,
+          userIp: '85.34.0.1', // WhatsApp kullanıcısı için varsayılan IP
+          userName: order.orderData.recipientName || 'Müşteri',
+          userPhone: order.whatsappPhone,
+          basketItems: [
+            {
+              name: `${order.orderData.song1.type} Şarkı Hediyesi`,
+              price: order.totalPrice,
+              quantity: 1,
+            },
+          ],
+        },
+        `${baseUrl}/payment/success?orderId=${order.id}`,
+        `${baseUrl}/payment/fail?orderId=${order.id}`
+      );
+
+      if (tokenResponse.status === 'success' && tokenResponse.token) {
+        const paymentUrl = `${baseUrl}/payment/${order.id}`;
+
+        // Kullanıcıya ödeme linki gönder
+        await this.whatsappService.sendTextMessage(
+          order.whatsappPhone,
+          `✅ *Sipariş Oluşturuldu!*
+
+🎵 Sipariş No: ${order.id}
+💰 Tutar: ${order.totalPrice} TL
+
+*Ödeme yapmak için:*
+👉 ${paymentUrl}
+
+⏰ Link 30 dakika geçerlidir.
+
+Ödeme tamamlandıktan sonra şarkınızın hazırlanmasına başlanacaktır!`
+        );
+
+        // Store payment token in order
+        await this.firebaseService.updateOrder(order.id, {
+          paymentToken: tokenResponse.token,
+        });
+
+        console.log(`💳 Payment link sent for order ${order.id}`);
+      } else {
+        throw new Error(`PayTR token error: ${tokenResponse.reason || 'Unknown'}`);
+      }
+    } catch (error: any) {
+      console.error('Error sending payment link:', error);
+      await this.whatsappService.sendTextMessage(
+        order.whatsappPhone,
+        `❌ Ödeme linki oluşturulamadı. Lütfen daha sonra tekrar deneyin.`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Handle successful payment (called from webhook)
+   */
+  async handlePaymentSuccess(orderId: string): Promise<void> {
+    try {
+      const order = await this.firebaseService.getOrder(orderId);
+      if (!order) {
+        console.error(`Order not found: ${orderId}`);
+        return;
+      }
+
+      // Check if already processed
+      if (order.status !== 'payment_pending') {
+        console.log(`Order ${orderId} already processed (status: ${order.status})`);
+        return;
+      }
+
+      // Update order status
+      await this.firebaseService.updateOrder(orderId, {
+        status: 'paid',
+        paidAt: new Date(),
+      });
+
+      // Send confirmation
+      await this.whatsappService.sendOrderConfirmation(
+        order.whatsappPhone,
+        orderId,
+        order.totalPrice,
+        order.estimatedDelivery
+      );
+
+      // Start processing
+      await this.processOrder(orderId);
+
+      console.log(`✅ Payment processed for order ${orderId}`);
+    } catch (error: any) {
+      console.error('Error handling payment success:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create order from conversation (legacy - kept for compatibility)
    */
   private async createOrderFromConversation(conversation: ConversationState): Promise<void> {
     try {

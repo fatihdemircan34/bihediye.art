@@ -6,9 +6,11 @@ import { OpenAIService } from './services/openai.service';
 import { WhatsAppService } from './services/whatsapp.service';
 import { FirebaseService } from './services/firebase.service';
 import { FirebaseQueueService } from './services/firebase-queue.service';
+import { PaytrService } from './services/paytr.service';
 import { OrderService } from './services/order.service';
 import { OrderRoutes } from './api/order.routes';
 import { WebhookRoutes } from './api/webhook.routes';
+import { createPaymentRouter } from './routes/payment.routes';
 
 class App {
   private app: Express;
@@ -17,6 +19,7 @@ class App {
   private whatsappService: WhatsAppService;
   private firebaseService: FirebaseService;
   private queueService: FirebaseQueueService;
+  private paytrService?: PaytrService;
   private orderService: OrderService;
 
   constructor() {
@@ -82,13 +85,28 @@ class App {
     );
     console.log('✅ Firebase Queue service initialized - async mode enabled');
 
+    // Initialize PayTR service (if credentials provided)
+    if (process.env.PAYTR_MERCHANT_ID && process.env.PAYTR_MERCHANT_ID !== 'your_merchant_id') {
+      this.paytrService = new PaytrService({
+        merchantId: process.env.PAYTR_MERCHANT_ID,
+        merchantKey: process.env.PAYTR_MERCHANT_KEY!,
+        merchantSalt: process.env.PAYTR_MERCHANT_SALT!,
+        testMode: process.env.PAYTR_TEST_MODE === '1',
+      });
+      console.log('✅ PayTR service initialized (payment gateway enabled)');
+    } else {
+      console.warn('⚠️  PayTR credentials not configured - payment gateway disabled');
+      console.warn('   Orders will be processed without payment');
+    }
+
     // Initialize Order service (manages conversations and orders)
     this.orderService = new OrderService(
       this.minimaxService,
       this.openaiService,
       this.whatsappService,
       this.firebaseService,
-      this.queueService
+      this.queueService,
+      this.paytrService
     );
 
     console.log('✅ Services initialized successfully');
@@ -123,6 +141,13 @@ class App {
     const webhookRoutes = new WebhookRoutes();
     webhookRoutes.setOrderService(this.orderService); // Connect webhook to order service
     this.app.use('/webhook', webhookRoutes.router);
+
+    // Payment routes (PayTR callback and payment pages)
+    if (this.paytrService) {
+      const paymentRouter = createPaymentRouter(this.paytrService, this.orderService);
+      this.app.use('/payment', paymentRouter);
+      console.log('✅ Payment routes initialized (/payment/*)');
+    }
 
     // API routes (for manual order creation if needed)
     const orderRoutes = new OrderRoutes(
@@ -210,6 +235,9 @@ class App {
       console.log(`🚀 Server running on port ${config.port}`);
       console.log(`📍 Health check: http://localhost:${config.port}/health`);
       console.log(`📱 Bird.com webhook: http://localhost:${config.port}/webhook/bird`);
+      if (this.paytrService) {
+        console.log(`💳 PayTR callback: http://localhost:${config.port}/payment/callback`);
+      }
       console.log(`👨‍💼 Admin:`)
       console.log(`   - Orders: http://localhost:${config.port}/admin/orders`);
       console.log(`   - Conversations: http://localhost:${config.port}/admin/conversations`);

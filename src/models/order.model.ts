@@ -40,7 +40,7 @@ export interface Order {
   orderData: OrderRequest;
 
   // İşlem Durumları
-  status: 'pending' | 'lyrics_generating' | 'music_generating' | 'video_generating' | 'completed' | 'failed';
+  status: 'payment_pending' | 'paid' | 'pending' | 'lyrics_generating' | 'music_generating' | 'video_generating' | 'completed' | 'failed';
 
   // AI Task ID'leri
   song1LyricsTaskId?: string;
@@ -66,6 +66,11 @@ export interface Order {
   createdAt: Date;
   completedAt?: Date;
   estimatedDelivery?: Date;
+  paidAt?: Date;
+
+  // Ödeme Bilgileri
+  paymentToken?: string;
+  paymentTransactionId?: string;
 
   // Notlar
   errorMessage?: string;
