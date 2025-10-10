@@ -77,6 +77,12 @@ export class OrderService {
         data: {},
         lastUpdated: new Date(),
       };
+
+      // Log analytics: conversation started
+      await this.firebaseService.logAnalytics('conversation_started', {
+        phone: from,
+        timestamp: new Date().toISOString(),
+      });
     }
 
     // Update last activity
@@ -84,6 +90,13 @@ export class OrderService {
 
     // Handle special commands
     if (message.toLowerCase() === 'iptal' || message.toLowerCase() === 'cancel') {
+      // Log analytics: conversation abandoned
+      await this.firebaseService.logAnalytics('conversation_abandoned', {
+        phone: from,
+        step: conversation.step,
+        timestamp: new Date().toISOString(),
+      });
+
       await this.firebaseService.deleteConversation(from);
       await this.whatsappService.sendTextMessage(from, '❌ Sipariş iptal edildi. Yeni sipariş için "merhaba" yazın.');
       return;
@@ -142,6 +155,14 @@ _İptal etmek için "iptal" yazın_`
           return;
         }
         conversation.data.song1 = { type: song1Type } as any;
+
+        // Log analytics: song type selected
+        await this.firebaseService.logAnalytics('song_type_selected', {
+          phone: from,
+          songType: song1Type,
+          timestamp: new Date().toISOString(),
+        });
+
         await this.whatsappService.sendTextMessage(
           from,
           `✅ Şarkı Türü: ${song1Type}
@@ -163,6 +184,15 @@ _İptal etmek için "iptal" yazın_`
           return;
         }
         conversation.data.song1!.style = song1Style;
+
+        // Log analytics: song style selected
+        await this.firebaseService.logAnalytics('song_style_selected', {
+          phone: from,
+          songStyle: song1Style,
+          songType: conversation.data.song1?.type,
+          timestamp: new Date().toISOString(),
+        });
+
         await this.whatsappService.sendTextMessage(
           from,
           `✅ Tarz: ${song1Style}
@@ -291,8 +321,24 @@ Yoksa "hayır" yazın.`
 
       case 'confirm':
         if (message === '1') {
+          // Log analytics: conversation completed
+          await this.firebaseService.logAnalytics('conversation_completed', {
+            phone: from,
+            songType: conversation.data.song1?.type,
+            songStyle: conversation.data.song1?.style,
+            timestamp: new Date().toISOString(),
+          });
+
           await this.createOrderAndSendPaymentLink(conversation);
         } else if (message === '2') {
+          // Log analytics: order cancelled at confirm step
+          await this.firebaseService.logAnalytics('conversation_abandoned', {
+            phone: from,
+            step: 'confirm',
+            reason: 'user_cancelled',
+            timestamp: new Date().toISOString(),
+          });
+
           await this.firebaseService.deleteConversation(from);
           await this.whatsappService.sendTextMessage(
             from,
@@ -493,6 +539,14 @@ Sipariş numaranız: ${orderId}`
           paymentToken: tokenResponse.token,
         });
 
+        // Log analytics: payment link sent
+        await this.firebaseService.logAnalytics('payment_link_sent', {
+          orderId: order.id,
+          phone: order.whatsappPhone,
+          amount: order.totalPrice,
+          timestamp: new Date().toISOString(),
+        });
+
         console.log(`💳 Payment link sent for order ${order.id}`);
       } else {
         throw new Error(`PayTR token error: ${tokenResponse.reason || 'Unknown'}`);
@@ -528,6 +582,14 @@ Sipariş numaranız: ${orderId}`
       await this.firebaseService.updateOrder(orderId, {
         status: 'paid',
         paidAt: new Date(),
+      });
+
+      // Log analytics: payment completed
+      await this.firebaseService.logAnalytics('payment_completed', {
+        orderId,
+        phone: order.whatsappPhone,
+        amount: order.totalPrice,
+        timestamp: new Date().toISOString(),
       });
 
       // Send confirmation
@@ -622,6 +684,14 @@ Sipariş numaranız: ${orderId}`
       await this.firebaseService.updateOrder(orderId, { status: 'lyrics_generating' });
       await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Şarkı sözleri yazılıyor...', 10);
 
+      // Log analytics: lyrics generation started
+      await this.firebaseService.logAnalytics('lyrics_generation_started', {
+        orderId,
+        phone: order.whatsappPhone,
+        songType: order.orderData.song1.type,
+        timestamp: new Date().toISOString(),
+      });
+
       const song1Lyrics = await this.openaiService.generateLyrics({
         songDetails: order.orderData.song1,
         story: order.orderData.story,
@@ -637,6 +707,14 @@ Sipariş numaranız: ${orderId}`
       // Generate music using queue (async) - NO progress update here, queue handles it
       order.status = 'music_generating';
       await this.firebaseService.updateOrder(orderId, { status: 'music_generating' });
+
+      // Log analytics: music generation started
+      await this.firebaseService.logAnalytics('music_generation_started', {
+        orderId,
+        phone: order.whatsappPhone,
+        songType: order.orderData.song1.type,
+        timestamp: new Date().toISOString(),
+      });
 
       if (this.queueService) {
         // Use async queue for better performance under load
@@ -719,6 +797,14 @@ Sipariş numaranız: ${orderId}`
 
       // Deliver files
       await this.deliverOrder(order);
+
+      // Log analytics: order delivered
+      await this.firebaseService.logAnalytics('order_delivered', {
+        orderId,
+        phone: order.whatsappPhone,
+        songType: order.orderData.song1.type,
+        timestamp: new Date().toISOString(),
+      });
 
     } catch (error: any) {
       console.error('Error processing order:', error);
