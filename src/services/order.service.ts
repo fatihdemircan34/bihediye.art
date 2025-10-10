@@ -79,7 +79,18 @@ export class OrderService {
     // Load conversation from Firebase
     let conversation = await this.firebaseService.getConversation(from);
 
-    if (!conversation) {
+    // Check if user says "merhaba" - reset conversation
+    const isGreeting = message.toLowerCase().trim() === 'merhaba' ||
+                       message.toLowerCase().trim() === 'hello' ||
+                       message.toLowerCase().trim() === 'hi';
+
+    if (!conversation || isGreeting) {
+      // If greeting and conversation exists, delete old one first
+      if (conversation && isGreeting) {
+        await this.firebaseService.deleteConversation(from);
+        console.log(`🔄 Old conversation deleted for ${from}, starting fresh`);
+      }
+
       // Start new conversation
       conversation = {
         phone: from,
@@ -615,6 +626,10 @@ Onaylıyor musunuz?
 
 Teşekkür ederiz! ❤️`
         );
+
+        // Clean up conversation immediately (allow new orders)
+        await this.firebaseService.deleteConversation(conversation.phone);
+        console.log(`🗑️ Conversation deleted for ${conversation.phone} (0 TL order)`);
 
         // Start processing immediately (handlePaymentSuccess will update status and process)
         await this.handlePaymentSuccess(orderId);
