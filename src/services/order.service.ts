@@ -561,6 +561,35 @@ Onaylıyor musunuz?
         totalPrice: order.totalPrice,
       });
 
+      // Check if order is free (0 TL) - skip payment
+      if (order.totalPrice === 0) {
+        console.log(`🎁 Free order detected (100% discount) - skipping payment for ${orderId}`);
+
+        // Mark as paid immediately
+        await this.firebaseService.updateOrder(orderId, {
+          status: 'paid',
+          paidAt: new Date(),
+        });
+
+        // Send confirmation
+        await this.whatsappService.sendTextMessage(
+          conversation.phone,
+          `🎉 *Siparişiniz Onaylandı!*
+
+🎵 Sipariş No: ${orderId}
+💰 Tutar: 0 TL (Hediyemiz olsun! 🎁)
+
+Şarkınızın hazırlanmasına başlıyoruz! 2 saat içinde teslim edilecek.
+
+Teşekkür ederiz! ❤️`
+        );
+
+        // Start processing immediately
+        await this.handlePaymentSuccess(orderId);
+
+        return;
+      }
+
       // Generate payment link and send
       if (this.paytrService) {
         await this.sendPaymentLink(order);
