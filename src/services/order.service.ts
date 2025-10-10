@@ -6,6 +6,7 @@ import { WhatsAppService } from './whatsapp.service';
 import { FirebaseService } from './firebase.service';
 import { FirebaseQueueService } from './firebase-queue.service';
 import { PaytrService } from './paytr.service';
+import { AIConversationService } from './ai-conversation.service';
 import { config } from '../config/config';
 
 /**
@@ -34,6 +35,7 @@ export interface ConversationState {
 export class OrderService {
   private queueService?: FirebaseQueueService;
   private paytrService?: PaytrService;
+  private aiConversationService: AIConversationService;
 
   constructor(
     private minimaxService: MinimaxService,
@@ -45,6 +47,7 @@ export class OrderService {
   ) {
     this.queueService = queueService;
     this.paytrService = paytrService;
+    this.aiConversationService = new AIConversationService(openaiService);
     // Start cleanup job for old conversations
     this.startCleanupJob();
   }
@@ -124,192 +127,217 @@ export class OrderService {
       case 'welcome':
         await this.whatsappService.sendTextMessage(
           from,
-          `🎵 *bihediye.art'a Hoş Geldiniz!*
+          `🎵 *Merhaba! bihediye.art'a hoş geldiniz!*
 
-Yapay zeka ile kişiye özel şarkı hediyesi oluşturuyoruz.
+Sevdiklerinize yapay zeka ile hazırlanan özel bir şarkı hediye etmek ister misiniz? 🎁
 
-*Paket İçeriği:*
-🎵 1 Özel Şarkı (2+ dakika)
-💰 Fiyat: ${config.pricing.songBasePrice} TL
+💰 Sadece ${config.pricing.songBasePrice} TL karşılığında, hikayenizden ilham alan, 2 dakikadan uzun, profesyonel bir şarkı hazırlıyoruz!
 
-*Şarkının Türünü* seçin:
+✨ *Nasıl bir şarkı düşünüyorsunuz?*
 
-1️⃣ Pop
-2️⃣ Rap
-3️⃣ Jazz
-4️⃣ Arabesk
-5️⃣ Klasik
-6️⃣ Rock
-7️⃣ Metal
-8️⃣ Nostaljik
+Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini seçebilirsiniz. İstediğiniz türü yazmanız yeterli!
 
-_İptal etmek için "iptal" yazın_`
+Örneğin: "Pop müzik istiyorum" veya sadece "Rap" yazabilirsiniz 😊
+
+_İstediğiniz zaman "iptal" yazarak vazgeçebilirsiniz_`
         );
         conversation.step = 'song1_type';
         break;
 
       case 'song1_type':
-        const song1Type = this.parseMusicType(message);
-        if (!song1Type) {
-          await this.whatsappService.sendTextMessage(from, '❌ Geçersiz seçim. Lütfen 1-8 arası numara girin.');
+        const songTypeResult = await this.aiConversationService.parseSongType(message);
+
+        if (!songTypeResult.type) {
+          // User didn't select a type or needs help
+          await this.whatsappService.sendTextMessage(from, songTypeResult.response);
           return;
         }
-        conversation.data.song1 = { type: song1Type } as any;
+
+        conversation.data.song1 = { type: songTypeResult.type } as any;
 
         // Log analytics: song type selected
         await this.firebaseService.logAnalytics('song_type_selected', {
           phone: from,
-          songType: song1Type,
+          songType: songTypeResult.type,
           timestamp: new Date().toISOString(),
         });
 
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ Şarkı Türü: ${song1Type}
+          `${songTypeResult.response}
 
-*Şarkının Tarzını* seçin:
+✨ *Şarkının tarzını belirleyelim mi?*
 
-1️⃣ Romantik
-2️⃣ Duygusal
-3️⃣ Eğlenceli
-4️⃣ Sakin`
+Romantik, Duygusal, Eğlenceli veya Sakin tarzlarından hangisini istersiniz?
+
+İstediğinizi yazabilirsiniz! 😊`
         );
         conversation.step = 'song1_style';
         break;
 
       case 'song1_style':
-        const song1Style = this.parseStyle(message);
-        if (!song1Style) {
-          await this.whatsappService.sendTextMessage(from, '❌ Geçersiz seçim. Lütfen 1-4 arası numara girin.');
+        const songStyleResult = await this.aiConversationService.parseSongStyle(message, conversation.data.song1!.type);
+
+        if (!songStyleResult.style) {
+          await this.whatsappService.sendTextMessage(from, songStyleResult.response);
           return;
         }
-        conversation.data.song1!.style = song1Style;
+
+        conversation.data.song1!.style = songStyleResult.style;
 
         // Log analytics: song style selected
         await this.firebaseService.logAnalytics('song_style_selected', {
           phone: from,
-          songStyle: song1Style,
+          songStyle: songStyleResult.style,
           songType: conversation.data.song1?.type,
           timestamp: new Date().toISOString(),
         });
 
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ Tarz: ${song1Style}
+          `${songStyleResult.response}
 
-*Vokal Seçimi:*
+🎤 *Şarkıyı hangi seste dinlemek istersiniz?*
 
-1️⃣ Kadın
-2️⃣ Erkek
-3️⃣ Fark etmez`
+Kadın sesi mi, Erkek sesi mi yoksa Fark etmez mi?`
         );
         conversation.step = 'song1_vocal';
         break;
 
       case 'song1_vocal':
-        const song1Vocal = this.parseVocal(message);
-        if (!song1Vocal) {
-          await this.whatsappService.sendTextMessage(from, '❌ Geçersiz seçim. Lütfen 1-3 arası numara girin.');
+        const vocalResult = await this.aiConversationService.parseVocal(message);
+
+        if (!vocalResult.vocal) {
+          await this.whatsappService.sendTextMessage(from, vocalResult.response);
           return;
         }
-        conversation.data.song1!.vocal = song1Vocal;
+
+        conversation.data.song1!.vocal = vocalResult.vocal;
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ Şarkı Ayarları Tamamlandı! 🎵
+          `${vocalResult.response}
 
-Şarkıyı *hediye edeceğiniz kişi sizin neyiniz?*
+🎁 *Harika! Şarkı ayarları tamamlandı.*
 
-Örnek: Annem, Babam, Sevgilim, Arkadaşım`
+Şimdi biraz daha kişiselleştirelim... Bu şarkıyı hediye edeceğiniz kişi sizin neyiniz?
+
+Örneğin: "Annem", "Sevgilim", "En yakın arkadaşım" gibi...`
         );
         conversation.step = 'recipient_relation';
         break;
 
       case 'recipient_relation':
-        conversation.data.recipientRelation = message;
+        const relationResult = await this.aiConversationService.parseRecipientRelation(message);
+
+        if (!relationResult.relation) {
+          await this.whatsappService.sendTextMessage(from, relationResult.response);
+          return;
+        }
+
+        conversation.data.recipientRelation = relationResult.relation;
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ Hediye: ${message}
+          `${relationResult.response}
 
-*Şarkıda isim geçsin mi?*
+💝 *Şarkıda hediye edeceğiniz kişinin ismi geçsin mi?*
 
-1️⃣ Evet (isim geçsin)
-2️⃣ Hayır (isim geçmesin)`
+"Evet" veya "Hayır" diyebilirsiniz.`
         );
         conversation.step = 'name_in_song';
         break;
 
       case 'name_in_song':
-        if (message === '1') {
+        const nameInSongResult = await this.aiConversationService.parseNameInSong(message);
+
+        if (nameInSongResult.answer === null) {
+          await this.whatsappService.sendTextMessage(from, nameInSongResult.response);
+          return;
+        }
+
+        if (nameInSongResult.answer === true) {
           conversation.data.includeNameInSong = true;
           await this.whatsappService.sendTextMessage(
             from,
-            `*Hediye edeceğiniz kişinin adı nedir?*
+            `${nameInSongResult.response}
 
-Tam adını yazın:`
+📝 *Hediye edeceğiniz kişinin adı nedir?*
+
+İsmini yazabilirsiniz:`
           );
           conversation.step = 'recipient_name';
-        } else if (message === '2') {
+        } else {
           conversation.data.includeNameInSong = false;
           await this.whatsappService.sendTextMessage(
             from,
-            `✅ Şarkıda isim geçmeyecek
+            `${nameInSongResult.response}
 
-Şimdi şarkının *hikayesini* yazın:
+📖 *Şimdi sıra hikayenizde!*
 
-Şarkıda geçmesini istediğiniz duygular, anılar, hikayeniz...
-(Max 900 karakter)`
+Şarkıda geçmesini istediğiniz duyguları, anıları, hikayenizi yazın... Ne kadar samimi olursanız, şarkı o kadar özel olacak! 💝
+
+(En az birkaç cümle yazın, maksimum 900 karakter)`
           );
           conversation.step = 'story';
-        } else {
-          await this.whatsappService.sendTextMessage(from, '❌ Lütfen 1 veya 2 yazın.');
         }
         break;
 
       case 'recipient_name':
-        conversation.data.recipientName = message;
+        const recipientNameResult = await this.aiConversationService.parseRecipientName(message);
+
+        if (!recipientNameResult.name) {
+          await this.whatsappService.sendTextMessage(from, recipientNameResult.response);
+          return;
+        }
+
+        conversation.data.recipientName = recipientNameResult.name;
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ İsim: ${message}
+          `${recipientNameResult.response}
 
-Şimdi şarkının *hikayesini* yazın:
+📖 *Şimdi sıra hikayenizde!*
 
-Şarkıda geçmesini istediğiniz duygular, anılar, hikayeniz...
-(Max 900 karakter)`
+${recipientNameResult.name} için özel bir şarkı hazırlıyoruz... Şarkıda geçmesini istediğiniz duyguları, anıları, hikayenizi yazın. Ne kadar samimi olursanız, şarkı o kadar özel olacak! 💝
+
+(En az birkaç cümle yazın, maksimum 900 karakter)`
         );
         conversation.step = 'story';
         break;
 
       case 'story':
-        if (message.length > 900) {
-          await this.whatsappService.sendTextMessage(
-            from,
-            '❌ Hikaye çok uzun. Lütfen 900 karakterden kısa yazın.'
-          );
+        const storyValidation = await this.aiConversationService.validateStory(message);
+
+        if (!storyValidation.isValid) {
+          await this.whatsappService.sendTextMessage(from, storyValidation.response);
           return;
         }
+
         conversation.data.story = message;
         await this.whatsappService.sendTextMessage(
           from,
-          `✅ Hikaye alındı
+          `${storyValidation.response}
 
-*Ek notlarınız var mı?*
+📝 *Son bir soru: Ek notlarınız var mı?*
 
-Şarkı ile ilgili belirtmek istediğiniz notlar...
-(Max 300 karakter)
+Şarkı ile ilgili özellikle belirtmek istediğiniz bir şey varsa yazabilirsiniz. (Maksimum 300 karakter)
 
-Yoksa "hayır" yazın.`
+Yoksa "hayır" veya "yok" yazabilirsiniz.`
         );
         conversation.step = 'notes';
         break;
 
       case 'notes':
-        if (message.toLowerCase() !== 'hayır' && message.toLowerCase() !== 'hayir') {
-          if (message.length > 300) {
-            await this.whatsappService.sendTextMessage(from, '❌ Not çok uzun. Max 300 karakter.');
-            return;
-          }
-          conversation.data.notes = message;
+        const notesResult = await this.aiConversationService.parseNotes(message);
+
+        if (notesResult.hasNotes && !notesResult.notes) {
+          // Note is too long
+          await this.whatsappService.sendTextMessage(from, notesResult.response);
+          return;
         }
+
+        if (notesResult.hasNotes && notesResult.notes) {
+          conversation.data.notes = notesResult.notes;
+        }
+
         // Directly set delivery options (audio only)
         conversation.data.deliveryOptions = {
           audioFile: true,
@@ -320,7 +348,14 @@ Yoksa "hayır" yazın.`
         break;
 
       case 'confirm':
-        if (message === '1') {
+        const confirmResult = await this.aiConversationService.parseConfirmation(message);
+
+        if (confirmResult.confirmed === null) {
+          await this.whatsappService.sendTextMessage(from, confirmResult.response);
+          return;
+        }
+
+        if (confirmResult.confirmed === true) {
           // Log analytics: conversation completed
           await this.firebaseService.logAnalytics('conversation_completed', {
             phone: from,
@@ -329,8 +364,9 @@ Yoksa "hayır" yazın.`
             timestamp: new Date().toISOString(),
           });
 
+          await this.whatsappService.sendTextMessage(from, confirmResult.response);
           await this.createOrderAndSendPaymentLink(conversation);
-        } else if (message === '2') {
+        } else {
           // Log analytics: order cancelled at confirm step
           await this.firebaseService.logAnalytics('conversation_abandoned', {
             phone: from,
@@ -340,12 +376,7 @@ Yoksa "hayır" yazın.`
           });
 
           await this.firebaseService.deleteConversation(from);
-          await this.whatsappService.sendTextMessage(
-            from,
-            '❌ Sipariş iptal edildi. Yeni sipariş için "merhaba" yazın.'
-          );
-        } else {
-          await this.whatsappService.sendTextMessage(from, '❌ Lütfen 1 (Onayla) veya 2 (İptal) yazın.');
+          await this.whatsappService.sendTextMessage(from, confirmResult.response);
         }
         break;
     }
