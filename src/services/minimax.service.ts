@@ -238,9 +238,14 @@ export class MinimaxService {
     // Tarz/Ruh hali
     parts.push(`Tarz: ${this.translateStyle(request.style)}`);
 
-    // Vokal tercihi
+    // Vokal tercihi - Çeşitli ses karakteristikleri ile
     if (request.vocal && request.vocal !== 'Fark etmez') {
-      parts.push(`Vokal: ${request.vocal === 'Kadın' ? 'Female vocals' : 'Male vocals'}`);
+      const vocalCharacteristics = this.selectVocalCharacteristics(
+        request.vocal,
+        request.songType,
+        request.style
+      );
+      parts.push(`Vokal: ${vocalCharacteristics}`);
     }
 
     // Süre
@@ -249,6 +254,79 @@ export class MinimaxService {
     }
 
     return parts.join(', ');
+  }
+
+  /**
+   * Müzik türü ve tarza göre ses karakteristiği seç
+   * Her çağrıda farklı ses çeşitliliği için randomize eder
+   */
+  private selectVocalCharacteristics(vocal: string, songType: string, style: string): string {
+    const isFemale = vocal === 'Kadın';
+
+    // Ses tonu çeşitleri (her türde kullanılabilir)
+    const femaleVoiceTypes = [
+      'Soft female voice',           // Yumuşak
+      'Powerful female voice',       // Güçlü
+      'Gentle female voice',         // Nazik
+      'Strong female voice',         // Kuvvetli
+      'Sweet female voice',          // Tatlı
+      'Soulful female voice',        // Duygulu
+      'Clear female voice',          // Berrak
+      'Warm female voice',           // Sıcak
+    ];
+
+    const maleVoiceTypes = [
+      'Soft male voice',             // Yumuşak
+      'Powerful male voice',         // Güçlü
+      'Gentle male voice',           // Nazik
+      'Strong male voice',           // Kuvvetli
+      'Deep male voice',             // Derin
+      'Soulful male voice',          // Duygulu
+      'Clear male voice',            // Berrak
+      'Warm male voice',             // Sıcak
+    ];
+
+    // Müzik türüne göre özel ses karakteristikleri
+    const genreSpecificVocals: Record<string, string[]> = {
+      'Pop': ['energetic', 'catchy', 'bright', 'modern'],
+      'Rap': ['rhythmic', 'dynamic', 'urban', 'confident'],
+      'Jazz': ['smooth', 'sultry', 'rich', 'jazzy'],
+      'Arabesk': ['emotional', 'passionate', 'expressive', 'traditional'],
+      'Klasik': ['operatic', 'elegant', 'refined', 'classical'],
+      'Rock': ['powerful', 'edgy', 'raw', 'energetic'],
+      'Metal': ['intense', 'aggressive', 'powerful', 'heavy'],
+      'Nostaljik': ['nostalgic', 'vintage', 'retro', 'classic'],
+    };
+
+    // Tarza göre özel ses karakteristikleri
+    const styleSpecificVocals: Record<string, string[]> = {
+      'Romantik': ['tender', 'loving', 'intimate', 'heartfelt'],
+      'Duygusal': ['emotional', 'touching', 'sentimental', 'expressive'],
+      'Eğlenceli': ['upbeat', 'cheerful', 'lively', 'joyful'],
+      'Sakin': ['calm', 'peaceful', 'soothing', 'gentle'],
+    };
+
+    // Rastgele ses tipi seç
+    const voiceTypes = isFemale ? femaleVoiceTypes : maleVoiceTypes;
+    const baseVoice = voiceTypes[Math.floor(Math.random() * voiceTypes.length)];
+
+    // Tür ve tarza özel karakteristikler ekle
+    const characteristics: string[] = [];
+
+    if (genreSpecificVocals[songType]) {
+      const genreChar = genreSpecificVocals[songType];
+      characteristics.push(genreChar[Math.floor(Math.random() * genreChar.length)]);
+    }
+
+    if (styleSpecificVocals[style]) {
+      const styleChar = styleSpecificVocals[style];
+      characteristics.push(styleChar[Math.floor(Math.random() * styleChar.length)]);
+    }
+
+    // Sonuç: "Soft female voice, emotional, tender" gibi
+    return characteristics.length > 0
+      ? `${baseVoice}, ${characteristics.join(', ')}`
+      : baseVoice;
   }
 
   /**
