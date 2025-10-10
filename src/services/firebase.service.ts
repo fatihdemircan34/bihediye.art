@@ -280,13 +280,15 @@ export class FirebaseService {
 
   async logAnalytics(event: string, data: any): Promise<void> {
     try {
+      console.log(`📊 Logging analytics event: ${event}`, data);
       await this.db.collection(this.COLLECTIONS.ANALYTICS).add({
         event,
         data,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
       });
+      console.log(`✅ Analytics event logged successfully: ${event}`);
     } catch (error) {
-      console.error('Error logging analytics:', error);
+      console.error('❌ Error logging analytics:', error);
       // Don't throw, analytics should not break the app
     }
   }
