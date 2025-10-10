@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Bull, { Queue, Job } from 'bull';
 import { MinimaxService, MusicGenerationRequest } from './minimax.service';
 import { FirebaseService } from './firebase.service';

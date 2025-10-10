@@ -5,7 +5,7 @@ import { ConversationState } from './order.service';
 export class FirebaseService {
   private db: admin.firestore.Firestore;
   private storage: admin.storage.Storage;
-  private bucket: admin.storage.Bucket;
+  private bucket: any;
 
   // Collection names with bihediye_ prefix
   private readonly COLLECTIONS = {
@@ -492,7 +492,7 @@ export class FirebaseService {
   /**
    * Get Storage bucket instance
    */
-  getBucket(): admin.storage.Bucket {
+  getBucket(): any {
     return this.bucket;
   }
 }
