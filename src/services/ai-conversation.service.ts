@@ -10,13 +10,15 @@ export class AIConversationService {
   /**
    * Parse user message and extract song type selection
    */
-  async parseSongType(userMessage: string): Promise<{ type: string | null; response: string }> {
+  async parseSongType(userMessage: string): Promise<{ type: 'Pop' | 'Rap' | 'Jazz' | 'Arabesk' | 'Klasik' | 'Rock' | 'Metal' | 'Nostaljik' | null; response: string }> {
     const prompt = `Kullanıcı şarkı türü seçiyor. Mesajı: "${userMessage}"
 
 Müsait şarkı türleri: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
 
 Eğer kullanıcı bir tür seçtiyse (sayı veya isim), o türü döndür.
 Eğer kararsızsa veya soru soruyorsa, yardımcı ol ve seçenekleri açıkla.
+
+ÖNEMLI: "type" değeri MUTLAKA yukarıdaki şarkı türlerinden biri olmalı. Tam olarak aynı yazımla döndür (örn: "Pop", "Rap", "Jazz").
 
 JSON formatında cevap ver:
 {
@@ -25,8 +27,10 @@ JSON formatında cevap ver:
 }`;
 
     try {
-      const result = await this.openaiService.generateText(prompt, { temperature: 0.7 });
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      console.log('AI parseSongType raw result:', result);
       const parsed = JSON.parse(result);
+      console.log('AI parseSongType parsed:', parsed);
       return parsed;
     } catch (error) {
       console.error('AI parse error:', error);
