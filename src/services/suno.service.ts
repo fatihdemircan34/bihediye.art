@@ -455,17 +455,18 @@ export class SunoService {
 
   /**
    * Translate Turkish music types to English for better AI understanding
+   * IMPORTANT: Do NOT include artist names - Suno API rejects them
    */
   private translateMusicType(type: string): string {
     const translations: Record<string, string> = {
-      'Pop': 'Pop',
-      'Rap': 'Rap/Hip-hop',
-      'Jazz': 'Jazz',
-      'Arabesk': 'Turkish Arabesk',
-      'Klasik': 'Classical',
-      'Rock': 'Rock',
-      'Metal': 'Heavy Metal',
-      'Nostaljik': 'Nostalgic/Retro',
+      'Pop': 'Modern pop with catchy melodies',
+      'Rap': 'Hip-hop with rhythmic flow',
+      'Jazz': 'Smooth jazz with soulful melodies',
+      'Arabesk': 'Turkish traditional music with emotional vocals',
+      'Klasik': 'Classical orchestral',
+      'Rock': 'Rock with electric guitars',
+      'Metal': 'Heavy metal with powerful riffs',
+      'Nostaljik': 'Nostalgic retro vibes',
     };
     return translations[type] || type;
   }
