@@ -12,7 +12,7 @@ export function createPaymentRouter(
    * PayTR Callback/Webhook Endpoint
    * PayTR buraya ödeme sonucunu POST eder
    */
-  router.post('/callback', async (req: Request, res: Response) => {
+  router.post('/callback', async (req: Request, res: Response): Promise<void> => {
     try {
       console.log('📥 PayTR callback received:', {
         merchant_oid: req.body.merchant_oid,
@@ -63,7 +63,7 @@ export function createPaymentRouter(
    * Ödeme sayfası (iframe gösterir)
    * GET /payment/:orderId
    */
-  router.get('/:orderId', async (req: Request, res: Response) => {
+  router.get('/:orderId', async (req: Request, res: Response): Promise<void> => {
     try {
       const { orderId } = req.params;
 
