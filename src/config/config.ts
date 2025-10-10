@@ -7,10 +7,10 @@ export const config = {
   port: process.env.PORT || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
 
-  // Minimax.io Configuration
-  minimax: {
-    apiKey: process.env.MINIMAX_API_KEY || '',
-    baseUrl: process.env.MINIMAX_BASE_URL || 'https://api.minimax.chat',
+  // Suno AI Configuration
+  suno: {
+    apiKey: process.env.SUNO_API_KEY || '7ad751d26f4c84ea7e24b4b67af3c813',
+    baseUrl: process.env.SUNO_BASE_URL || 'https://api.sunoapi.org',
   },
 
   // OpenAI Configuration
@@ -61,8 +61,8 @@ export const config = {
 export const validateConfig = (): void => {
   const errors: string[] = [];
 
-  if (!config.minimax.apiKey) {
-    errors.push('MINIMAX_API_KEY is required');
+  if (!config.suno.apiKey) {
+    errors.push('SUNO_API_KEY is required');
   }
 
   if (!config.openai.apiKey) {

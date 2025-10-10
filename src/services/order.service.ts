@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Order, OrderRequest } from '../models/order.model';
-import { MinimaxService } from './minimax.service';
+import { SunoService } from './suno.service';
 import { OpenAIService } from './openai.service';
 import { WhatsAppService } from './whatsapp.service';
 import { FirebaseService } from './firebase.service';
@@ -44,7 +44,7 @@ export class OrderService {
   private aiConversationService: AIConversationService;
 
   constructor(
-    private minimaxService: MinimaxService,
+    private sunoService: SunoService,
     private openaiService: OpenAIService,
     private whatsappService: WhatsAppService,
     private firebaseService: FirebaseService,
@@ -930,14 +930,14 @@ Sipariş numaranız: ${orderId}`
       } else {
         // Fallback to sync mode (for development/testing)
         console.log('⚠️ No queue service - using sync mode');
-        const song1Task = await this.minimaxService.generateMusic({
+        const song1Task = await this.sunoService.generateMusic({
           lyrics: song1Lyrics,
           songType: order.orderData.song1.type,
           style: order.orderData.song1.style,
           vocal: order.orderData.song1.vocal,
         });
 
-        const song1Music = await this.minimaxService.waitForTaskCompletion(song1Task.task_id);
+        const song1Music = await this.sunoService.waitForTaskCompletion(song1Task.task_id);
 
         order.song1AudioUrl = song1Music.file_url;
         await this.firebaseService.updateOrder(orderId, {
@@ -959,12 +959,12 @@ Sipariş numaranız: ${orderId}`
           order.orderData.song1.type
         );
 
-        const videoTask = await this.minimaxService.generateVideo({
+        const videoTask = await this.sunoService.generateVideo({
           prompt: videoPrompt,
           imageUrl: order.orderData.coverPhoto,
         });
 
-        const videoResult = await this.minimaxService.waitForTaskCompletion(videoTask.task_id);
+        const videoResult = await this.sunoService.waitForTaskCompletion(videoTask.task_id);
         order.videoUrl = videoResult.file_url;
         await this.firebaseService.updateOrder(orderId, {
           videoTaskId: videoTask.task_id,

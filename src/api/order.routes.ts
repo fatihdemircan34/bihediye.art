@@ -1,24 +1,24 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { Order, OrderRequest, OrderResponse, OrderStatus } from '../models/order.model';
-import { MinimaxService } from '../services/minimax.service';
+import { SunoService } from '../services/suno.service';
 import { OpenAIService } from '../services/openai.service';
 import { WhatsAppService } from '../services/whatsapp.service';
 
 export class OrderRoutes {
   public router: Router;
   private orders: Map<string, Order> = new Map();
-  private minimaxService: MinimaxService;
+  private sunoService: SunoService;
   private openaiService: OpenAIService;
   private whatsappService: WhatsAppService;
 
   constructor(
-    minimaxService: MinimaxService,
+    sunoService: SunoService,
     openaiService: OpenAIService,
     whatsappService: WhatsAppService
   ) {
     this.router = Router();
-    this.minimaxService = minimaxService;
+    this.sunoService = sunoService;
     this.openaiService = openaiService;
     this.whatsappService = whatsappService;
     this.initializeRoutes();
@@ -191,13 +191,13 @@ export class OrderRoutes {
       await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler oluşturuluyor...', 40);
 
       const [song1Task, song2Task] = await Promise.all([
-        this.minimaxService.generateMusic({
+        this.sunoService.generateMusic({
           lyrics: song1Lyrics,
           songType: order.orderData.song1.type,
           style: order.orderData.song1.style,
           vocal: order.orderData.song1.vocal,
         }),
-        this.minimaxService.generateMusic({
+        this.sunoService.generateMusic({
           lyrics: song2Lyrics,
           songType: order.orderData.song2.type,
           style: order.orderData.song2.style,
@@ -210,8 +210,8 @@ export class OrderRoutes {
 
       // Wait for music generation to complete
       const [song1Music, song2Music] = await Promise.all([
-        this.minimaxService.waitForTaskCompletion(song1Task.task_id),
-        this.minimaxService.waitForTaskCompletion(song2Task.task_id),
+        this.sunoService.waitForTaskCompletion(song1Task.task_id),
+        this.sunoService.waitForTaskCompletion(song2Task.task_id),
       ]);
 
       order.song1AudioUrl = song1Music.file_url;
@@ -229,7 +229,7 @@ export class OrderRoutes {
           order.orderData.song1.type
         );
 
-        const videoTask = await this.minimaxService.generateVideo({
+        const videoTask = await this.sunoService.generateVideo({
           prompt: videoPrompt,
           imageUrl: order.orderData.coverPhoto,
           duration: 30,
@@ -237,7 +237,7 @@ export class OrderRoutes {
 
         order.videoTaskId = videoTask.task_id;
 
-        const videoResult = await this.minimaxService.waitForTaskCompletion(videoTask.task_id);
+        const videoResult = await this.sunoService.waitForTaskCompletion(videoTask.task_id);
         order.videoUrl = videoResult.file_url;
       }
 

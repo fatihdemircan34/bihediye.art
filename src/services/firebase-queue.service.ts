@@ -1,4 +1,4 @@
-import { MinimaxService, MusicGenerationRequest } from './minimax.service';
+import { SunoService, MusicGenerationRequest } from './suno.service';
 import { FirebaseService } from './firebase.service';
 import { WhatsAppService } from './whatsapp.service';
 
@@ -24,7 +24,7 @@ export interface MusicGenerationJob {
  * No Redis required - restart-safe with Firebase
  */
 export class FirebaseQueueService {
-  private minimaxService: MinimaxService;
+  private sunoService: SunoService;
   private firebaseService: FirebaseService;
   private whatsappService: WhatsAppService;
   private isProcessing: boolean = false;
@@ -34,11 +34,11 @@ export class FirebaseQueueService {
   private readonly MAX_ATTEMPTS = 3;
 
   constructor(
-    minimaxService: MinimaxService,
+    sunoService: SunoService,
     firebaseService: FirebaseService,
     whatsappService: WhatsAppService
   ) {
-    this.minimaxService = minimaxService;
+    this.sunoService = sunoService;
     this.firebaseService = firebaseService;
     this.whatsappService = whatsappService;
 
@@ -180,42 +180,58 @@ export class FirebaseQueueService {
           );
         }
 
-        // Generate music using Minimax (sync mode - returns hex audio)
+        // Generate music using Suno AI (async mode - returns task ID)
         await this.updateJobProgress(job.id, 30);
-        const musicResult = await this.minimaxService.generateMusic(request);
+        const musicTask = await this.sunoService.generateMusic(request);
 
-        console.log(`✅ Music generated successfully for job ${job.id}`);
+        console.log(`✅ Music generation task created for job ${job.id}: ${musicTask.task_id}`);
+
+        // Wait for music generation to complete (Suno is async, polls every 5 seconds)
+        await this.updateJobProgress(job.id, 40);
+        const musicResult = await this.sunoService.waitForTaskCompletion(
+          musicTask.task_id,
+          60,  // max attempts (60 * 5s = 5 minutes)
+          5000 // poll interval (5 seconds)
+        );
+
+        console.log(`✅ Music generation completed for job ${job.id}`);
 
         // Check if music generation was successful
         if (musicResult.status !== 'Success' || !musicResult.file_url) {
           throw new Error('Music generation failed - no file URL returned');
         }
 
-        await this.updateJobProgress(job.id, 50);
+        await this.updateJobProgress(job.id, 60);
 
-        // Send progress update: Music generated, uploading to storage (50%) - ONLY on first attempt
+        // Send progress update: Music generated, downloading (60%) - ONLY on first attempt
         if (job.attempts === 1) {
           await this.whatsappService.sendProgressUpdate(
             phoneNumber,
             orderId,
-            'Müzik oluşturuldu, yükleniyor...',
-            50
+            'Müzik oluşturuldu, indiriliyor...',
+            60
           );
         }
 
-        // Convert data URL to buffer and upload to Firebase Storage
-        console.log(`📤 Uploading audio to Firebase Storage...`);
-        let audioBuffer: Buffer;
+        // Download audio from Suno URL
+        console.log(`📥 Downloading audio from Suno...`);
+        const audioBuffer = await this.sunoService.downloadFile(musicResult.file_url);
+        console.log(`✅ Audio downloaded: ${(audioBuffer.length / 1024 / 1024).toFixed(2)} MB`);
 
-        if (musicResult.file_url.startsWith('data:audio/mp3;base64,')) {
-          // Extract base64 data and convert to buffer
-          const base64Data = musicResult.file_url.replace('data:audio/mp3;base64,', '');
-          audioBuffer = Buffer.from(base64Data, 'base64');
-        } else {
-          throw new Error('Invalid audio format from Minimax');
+        await this.updateJobProgress(job.id, 65);
+
+        // Send progress update: Uploading to storage (65%) - ONLY on first attempt
+        if (job.attempts === 1) {
+          await this.whatsappService.sendProgressUpdate(
+            phoneNumber,
+            orderId,
+            'Yükleniyor...',
+            65
+          );
         }
 
         // Upload to Firebase Storage
+        console.log(`📤 Uploading audio to Firebase Storage...`);
         storageUrl = await this.firebaseService.uploadAudio(orderId, songIndex, audioBuffer);
         console.log(`✅ Audio uploaded to Storage: ${storageUrl}`);
 

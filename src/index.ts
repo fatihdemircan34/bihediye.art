@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from 'express';
 import cors from 'cors';
 import { config, validateConfig } from './config/config';
-import { MinimaxService } from './services/minimax.service';
+import { SunoService } from './services/suno.service';
 import { OpenAIService } from './services/openai.service';
 import { WhatsAppService } from './services/whatsapp.service';
 import { FirebaseService } from './services/firebase.service';
@@ -16,7 +16,7 @@ import { createAdminRouter } from './routes/admin.routes';
 
 class App {
   private app: Express;
-  private minimaxService: MinimaxService;
+  private sunoService: SunoService;
   private openaiService: OpenAIService;
   private whatsappService: WhatsAppService;
   private firebaseService: FirebaseService;
@@ -56,10 +56,10 @@ class App {
   }
 
   private initializeServices(): void {
-    // Initialize Minimax service
-    this.minimaxService = new MinimaxService({
-      apiKey: config.minimax.apiKey,
-      baseUrl: config.minimax.baseUrl,
+    // Initialize Suno AI service
+    this.sunoService = new SunoService({
+      apiKey: config.suno.apiKey,
+      baseUrl: config.suno.baseUrl,
     });
 
     // Initialize OpenAI service
@@ -82,7 +82,7 @@ class App {
     // Uses Firebase for persistence - no Redis required!
     console.log('🔄 Initializing Firebase Queue service...');
     this.queueService = new FirebaseQueueService(
-      this.minimaxService,
+      this.sunoService,
       this.firebaseService,
       this.whatsappService
     );
@@ -111,7 +111,7 @@ class App {
 
     // Initialize Order service (manages conversations and orders)
     this.orderService = new OrderService(
-      this.minimaxService,
+      this.sunoService,
       this.openaiService,
       this.whatsappService,
       this.firebaseService,
@@ -139,7 +139,7 @@ class App {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         services: {
-          minimax: !!config.minimax.apiKey,
+          suno: !!config.suno.apiKey,
           openai: !!config.openai.apiKey,
           bird: !!config.bird.accessKey,
           firebase: true,
@@ -166,7 +166,7 @@ class App {
 
     // API routes (for manual order creation if needed)
     const orderRoutes = new OrderRoutes(
-      this.minimaxService,
+      this.sunoService,
       this.openaiService,
       this.whatsappService
     );
