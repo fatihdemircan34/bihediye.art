@@ -39,6 +39,11 @@ export const config = {
     testMode: process.env.PAYTR_TEST_MODE === '1',
     baseUrl: process.env.BASE_URL || 'http://localhost:3000',
   },
+
+  // Pricing Configuration
+  pricing: {
+    songBasePrice: parseInt(process.env.SONG_BASE_PRICE || '350', 10),
+  },
 };
 
 export const validateConfig = (): void => {

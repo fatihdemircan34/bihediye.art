@@ -6,6 +6,7 @@ import { WhatsAppService } from './whatsapp.service';
 import { FirebaseService } from './firebase.service';
 import { FirebaseQueueService } from './firebase-queue.service';
 import { PaytrService } from './paytr.service';
+import { config } from '../config/config';
 
 /**
  * Conversation state for collecting order information via WhatsApp
@@ -116,7 +117,7 @@ Yapay zeka ile kişiye özel şarkı hediyesi oluşturuyoruz.
 
 *Paket İçeriği:*
 🎵 1 Özel Şarkı (2+ dakika)
-💰 Fiyat: 350 TL
+💰 Fiyat: ${config.pricing.songBasePrice} TL
 
 *Şarkının Türünü* seçin:
 
@@ -534,7 +535,7 @@ Sipariş numaranız: ${orderId}`
         order.whatsappPhone,
         orderId,
         order.totalPrice,
-        order.estimatedDelivery
+        order.estimatedDelivery|| new Date(),
       );
 
       // Start processing
@@ -581,7 +582,7 @@ Sipariş numaranız: ${orderId}`
         conversation.phone,
         orderId,
         order.totalPrice,
-        order.estimatedDelivery
+        order.estimatedDelivery || new Date(),
       );
 
       // Log analytics
@@ -795,14 +796,14 @@ Sipariş numaranız: ${orderId}`
    * Helper: Calculate price
    */
   private calculatePrice(options: any): number {
-    return 350; // Fixed price for 1 song (audio only)
+    return config.pricing.songBasePrice; // Base price for 1 song (audio only)
   }
 
   /**
    * Helper: Calculate price details
    */
   private calculatePriceDetails(options: any): any {
-    const basePrice = 350;
+    const basePrice = config.pricing.songBasePrice;
     return {
       basePrice,
       additionalCosts: 0,
