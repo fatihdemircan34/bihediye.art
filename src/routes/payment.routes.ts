@@ -9,6 +9,141 @@ export function createPaymentRouter(
   const router = Router();
 
   /**
+   * Başarılı ödeme sonrası yönlendirme sayfası
+   * NOT: Bu route /:orderId'den ÖNCE olmalı!
+   */
+  router.get('/success', (req: Request, res: Response) => {
+    const { orderId } = req.query;
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ödeme Başarılı</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+          }
+          .success-box {
+            background: rgba(255,255,255,0.1);
+            padding: 60px 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .success-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+          }
+          p {
+            font-size: 18px;
+            line-height: 1.6;
+            margin: 15px 0;
+          }
+          .order-id {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-family: monospace;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="success-box">
+          <div class="success-icon">✅</div>
+          <h1>Ödeme Başarılı!</h1>
+          <p>Ödemeniz başarıyla alındı.</p>
+          ${orderId ? `<div class="order-id">Sipariş No: ${orderId}</div>` : ''}
+          <p>Şarkınızın hazırlanmasına başlandı!</p>
+          <p>WhatsApp üzerinden süreç hakkında bilgilendirileceksiniz.</p>
+          <p style="margin-top: 30px; font-size: 16px;">🎵 bihediye.art ekibi olarak teşekkür ederiz!</p>
+        </div>
+      </body>
+      </html>
+    `);
+  });
+
+  /**
+   * Başarısız ödeme sonrası yönlendirme sayfası
+   * NOT: Bu route /:orderId'den ÖNCE olmalı!
+   */
+  router.get('/fail', (req: Request, res: Response) => {
+    const { orderId } = req.query;
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ödeme Başarısız</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+          }
+          .fail-box {
+            background: rgba(255,255,255,0.1);
+            padding: 60px 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .fail-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+          }
+          p {
+            font-size: 18px;
+            line-height: 1.6;
+            margin: 15px 0;
+          }
+          .retry-button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 40px;
+            background: white;
+            color: #eb3349;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 18px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="fail-box">
+          <div class="fail-icon">❌</div>
+          <h1>Ödeme Başarısız</h1>
+          <p>Ödemeniz gerçekleştirilemedi.</p>
+          <p>Lütfen kart bilgilerinizi kontrol edip tekrar deneyin.</p>
+          ${orderId ? `<a href="/payment/${orderId}" class="retry-button">Tekrar Dene</a>` : ''}
+          <p style="margin-top: 30px; font-size: 14px;">Sorun devam ederse destek@bihediye.art ile iletişime geçin.</p>
+        </div>
+      </body>
+      </html>
+    `);
+  });
+
+  /**
    * PayTR Callback/Webhook Endpoint
    * PayTR buraya ödeme sonucunu POST eder
    */
@@ -329,139 +464,6 @@ export function createPaymentRouter(
         </html>
       `);
     }
-  });
-
-  /**
-   * Başarılı ödeme sonrası yönlendirme sayfası
-   */
-  router.get('/success', (req: Request, res: Response) => {
-    const { orderId } = req.query;
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Ödeme Başarılı</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            color: white;
-          }
-          .success-box {
-            background: rgba(255,255,255,0.1);
-            padding: 60px 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            max-width: 600px;
-            margin: 0 auto;
-          }
-          .success-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-          }
-          h1 {
-            font-size: 32px;
-            margin-bottom: 20px;
-          }
-          p {
-            font-size: 18px;
-            line-height: 1.6;
-            margin: 15px 0;
-          }
-          .order-id {
-            background: rgba(255,255,255,0.2);
-            padding: 15px;
-            border-radius: 10px;
-            margin: 20px 0;
-            font-family: monospace;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="success-box">
-          <div class="success-icon">✅</div>
-          <h1>Ödeme Başarılı!</h1>
-          <p>Ödemeniz başarıyla alındı.</p>
-          ${orderId ? `<div class="order-id">Sipariş No: ${orderId}</div>` : ''}
-          <p>Şarkınızın hazırlanmasına başlandı!</p>
-          <p>WhatsApp üzerinden süreç hakkında bilgilendirileceksiniz.</p>
-          <p style="margin-top: 30px; font-size: 16px;">🎵 bihediye.art ekibi olarak teşekkür ederiz!</p>
-        </div>
-      </body>
-      </html>
-    `);
-  });
-
-  /**
-   * Başarısız ödeme sonrası yönlendirme sayfası
-   */
-  router.get('/fail', (req: Request, res: Response) => {
-    const { orderId } = req.query;
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Ödeme Başarısız</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
-            color: white;
-          }
-          .fail-box {
-            background: rgba(255,255,255,0.1);
-            padding: 60px 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            max-width: 600px;
-            margin: 0 auto;
-          }
-          .fail-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-          }
-          h1 {
-            font-size: 32px;
-            margin-bottom: 20px;
-          }
-          p {
-            font-size: 18px;
-            line-height: 1.6;
-            margin: 15px 0;
-          }
-          .retry-button {
-            display: inline-block;
-            margin-top: 30px;
-            padding: 15px 40px;
-            background: white;
-            color: #eb3349;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 18px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="fail-box">
-          <div class="fail-icon">❌</div>
-          <h1>Ödeme Başarısız</h1>
-          <p>Ödemeniz gerçekleştirilemedi.</p>
-          <p>Lütfen kart bilgilerinizi kontrol edip tekrar deneyin.</p>
-          ${orderId ? `<a href="/payment/${orderId}" class="retry-button">Tekrar Dene</a>` : ''}
-          <p style="margin-top: 30px; font-size: 14px;">Sorun devam ederse destek@bihediye.art ile iletişime geçin.</p>
-        </div>
-      </body>
-      </html>
-    `);
   });
 
   return router;
