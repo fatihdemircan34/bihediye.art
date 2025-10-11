@@ -38,6 +38,7 @@ export interface SunoTaskStatus {
   audio_file?: string;
   video_file?: string;
   file_url?: string;
+  error_details?: string;
 }
 
 export class SunoService {
@@ -231,19 +232,21 @@ export class SunoService {
           console.error('❌ Suno content moderation error: Lyrics contain sensitive words');
           console.error('📋 Full Suno response data:', JSON.stringify(taskData, null, 2));
 
-          // Check if Suno provides details about which word was flagged
-          if (taskData.error_message || taskData.error || taskData.message || taskData.fail_reason) {
-            console.error('🔍 Error details:', {
-              error_message: taskData.error_message,
-              error: taskData.error,
-              message: taskData.message,
-              fail_reason: taskData.fail_reason,
-            });
-          }
+          // Extract error details - Suno provides specific information
+          const errorMessage = taskData.errorMessage || taskData.error_message || taskData.error || taskData.message || taskData.fail_reason || 'Unknown error';
+
+          console.error('🔍 Error details:', {
+            errorMessage: errorMessage,
+            error_message: taskData.error_message,
+            error: taskData.error,
+            message: taskData.message,
+            fail_reason: taskData.fail_reason,
+          });
 
           return {
             task_id: taskId,
             status: 'Failed',
+            error_details: errorMessage,
           };
         }
 
@@ -314,7 +317,10 @@ export class SunoService {
 
       if (status.status === 'Failed') {
         console.log('❌ Task failed!');
-        throw new Error('Suno music generation task failed');
+
+        // Include error details if available
+        const errorDetails = status.error_details || 'Unknown error';
+        throw new Error(`SENSITIVE_WORD_ERROR: ${errorDetails}`);
       }
 
       // Wait before next poll

@@ -203,11 +203,52 @@ export class FirebaseQueueService {
             5000 // poll interval (5 seconds)
           );
         } catch (error: any) {
-          // Check if it's a content moderation error
+          // Check if it's a content moderation error (lyrics or tags/style)
           if (error.message && error.message.includes('SENSITIVE_WORD_ERROR')) {
             console.error(`⚠️ Content moderation error detected for job ${job.id}`);
+            console.error(`   Error: ${error.message}`);
 
-            // Initialize content moderation retries if not exists
+            // Check if it's an artist name error in tags/style
+            const artistNameMatch = error.message.match(/artist name:\s*(.+?)(?:\n|$)/i);
+
+            if (artistNameMatch) {
+              // Artist name found in style/tags - remove it and retry
+              const artistName = artistNameMatch[1].trim();
+              console.log(`🎨 Artist name detected in style: "${artistName}"`);
+              console.log(`   Current style: "${job.request.style}"`);
+
+              // Remove artist name from style
+              const cleanedStyle = job.request.style
+                .replace(new RegExp(artistName, 'gi'), '')
+                .replace(/\s*,\s*,\s*/g, ', ') // Clean up double commas
+                .replace(/^,\s*|,\s*$/g, '')    // Clean up leading/trailing commas
+                .trim();
+
+              console.log(`   Cleaned style: "${cleanedStyle}"`);
+
+              // Update job request with cleaned style
+              job.request.style = cleanedStyle;
+
+              // Also clear artistStyleDescription if it exists
+              if (job.request.artistStyleDescription) {
+                console.log(`   Clearing artistStyleDescription: "${job.request.artistStyleDescription}"`);
+                job.request.artistStyleDescription = undefined;
+              }
+
+              // Save updated job and mark as pending for immediate retry
+              await db.collection(this.COLLECTION).doc(job.id).update({
+                'request.style': cleanedStyle,
+                'request.artistStyleDescription': null,
+                status: 'pending',
+                error: `Artist name removed from style: ${artistName}`,
+                updatedAt: new Date().toISOString(),
+              });
+
+              console.log(`✅ Job ${job.id} queued for retry with cleaned style (no artist name)`);
+              return; // Exit and let the queue retry this job
+            }
+
+            // Initialize content moderation retries if not exists (for lyrics issues)
             const contentRetries = job.contentModerationRetries || 0;
 
             if (contentRetries < this.MAX_CONTENT_MODERATION_RETRIES) {
