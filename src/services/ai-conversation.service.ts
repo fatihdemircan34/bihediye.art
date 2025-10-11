@@ -106,6 +106,19 @@ DOĞRU örnekler:
 ✅ "smooth Turkish jazz with emotional vocals"
 ✅ "energetic Turkish pop with dance rhythms"
 
+===========================================
+ÖNEMLİ: CEVAP VERMEDEN ÖNCE KONTROL ET
+===========================================
+artistStyleDescription yazdıysan, şunu kontrol et:
+1. İçinde sanatçı ismi var mı? → Varsa SİL, sadece müzikal özellikler yaz
+2. "style", "like", "tarzında", "gibi" kelimeleri var mı? → Varsa SİL
+3. Sadece müzikal terimler var mı (pop, jazz, vocals, melodies, vb.)? → İyidir
+
+Örnek self-check:
+❌ "Melike Şahin style indie pop" → "indie pop with alternative influences"
+❌ "smooth jazz like Norah Jones" → "smooth jazz with soft female vocals"
+✅ "smooth jazz with soft female vocals" → TAMAM
+
 JSON formatında cevap ver:
 {
   "type": "Pop" (veya null),

@@ -338,7 +338,28 @@ export class SunoService {
     // If artist style description provided, use it (ChatGPT should have cleaned it already)
     if (request.artistStyleDescription) {
       console.log('🎨 Using artist style description:', request.artistStyleDescription);
-      parts.push(request.artistStyleDescription);
+
+      // Safety check: detect potential artist name patterns
+      // This is a last resort check - ChatGPT should have already cleaned it
+      const suspiciousPatterns = [
+        /\bstyle\b/i,           // "X style"
+        /\blike\b/i,            // "like X"
+        /\btarzında\b/i,        // "X tarzında"
+        /\bgibi\b/i,            // "X gibi"
+        /\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/, // Capitalized names like "Dua Lipa"
+      ];
+
+      const hasSuspiciousPattern = suspiciousPatterns.some(pattern =>
+        pattern.test(request.artistStyleDescription || '')
+      );
+
+      if (hasSuspiciousPattern) {
+        console.warn('⚠️ Artist style description contains suspicious patterns, falling back to default');
+        console.warn('   Suspicious text:', request.artistStyleDescription);
+        parts.push(this.translateMusicType(request.songType));
+      } else {
+        parts.push(request.artistStyleDescription);
+      }
     } else {
       // Normal flow: translate music type
       parts.push(this.translateMusicType(request.songType));
