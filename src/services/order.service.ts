@@ -481,8 +481,12 @@ Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
           const pendingOrder = orders.find(o => o.status === 'lyrics_generating' || o.status === 'paid');
 
           if (pendingOrder) {
+            // IMPORTANT: Delete conversation BEFORE starting music generation
+            // This resets user state to initial (allows new orders)
             await this.firebaseService.deleteConversation(from);
-            await this.processOrder(pendingOrder.id);
+
+            // Start music generation directly (lyrics already generated and approved)
+            await this.startMusicGeneration(pendingOrder.id);
           }
         } else if (reviewResult.action === 'revise') {
           // User wants revision
@@ -501,8 +505,11 @@ Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
             const pendingOrder = orders.find(o => o.status === 'lyrics_generating' || o.status === 'paid');
 
             if (pendingOrder) {
+              // Delete conversation first (reset user state)
               await this.firebaseService.deleteConversation(from);
-              await this.processOrder(pendingOrder.id);
+
+              // Start music generation directly (lyrics already exist and approved)
+              await this.startMusicGeneration(pendingOrder.id);
             }
           } else {
             // Process revision
@@ -1058,6 +1065,152 @@ Ne yapmak istersiniz?
         conversation.phone,
         `❌ Sipariş oluşturulurken hata: ${error.message}`
       );
+    }
+  }
+
+  /**
+   * Start music generation directly (lyrics already approved)
+   * Called when user approves lyrics from review
+   */
+  private async startMusicGeneration(orderId: string): Promise<void> {
+    const order = await this.firebaseService.getOrder(orderId);
+    if (!order) return;
+
+    try {
+      // Lyrics already exist (from review), get them from order
+      if (!order.song1Lyrics) {
+        console.error(`No lyrics found for order ${orderId}`);
+        return;
+      }
+
+      const lyricsRequest = {
+        songDetails: order.orderData.song1,
+        story: order.orderData.story,
+        recipientName: order.orderData.recipientName,
+        recipientRelation: order.orderData.recipientRelation,
+        includeNameInSong: order.orderData.includeNameInSong,
+        notes: order.orderData.notes,
+      };
+
+      // Synthesize music genre for Suno AI V5 (combines type + notes + artist styles)
+      console.log('🎼 Synthesizing music genre for Suno AI V5...');
+      const synthesizedGenre = await this.openaiService.synthesizeMusicGenre(lyricsRequest);
+      console.log('✅ Synthesized genre:', synthesizedGenre);
+
+      // Generate music using queue (async)
+      order.status = 'music_generating';
+      await this.firebaseService.updateOrder(orderId, { status: 'music_generating' });
+
+      // Log analytics: music generation started
+      await this.firebaseService.logAnalytics('music_generation_started', {
+        orderId,
+        phone: order.whatsappPhone,
+        songType: order.orderData.song1.type,
+        synthesizedGenre,
+        timestamp: new Date().toISOString(),
+      });
+
+      if (this.queueService) {
+        // Use async queue for better performance under load
+        console.log('🚀 Using queue service for music generation');
+        await this.queueService.addMusicGenerationJob({
+          orderId,
+          phoneNumber: order.whatsappPhone,
+          songIndex: 1,
+          request: {
+            lyrics: order.song1Lyrics, // Use approved lyrics from order
+            songType: synthesizedGenre, // Use synthesized genre
+            style: order.orderData.song1.style,
+            vocal: order.orderData.song1.vocal,
+            artistStyleDescription: order.orderData.song1.artistStyleDescription,
+          },
+        });
+        // Queue will handle the rest (music generation + delivery)
+        console.log(`✅ Music generation queued for order ${orderId}`);
+        return;
+      } else {
+        // Fallback to sync mode (for development/testing)
+        console.log('⚠️ No queue service - using sync mode');
+        const song1Task = await this.sunoService.generateMusic({
+          lyrics: order.song1Lyrics, // Use approved lyrics
+          songType: order.orderData.song1.type,
+          style: order.orderData.song1.style,
+          vocal: order.orderData.song1.vocal,
+          artistStyleDescription: order.orderData.song1.artistStyleDescription,
+        });
+
+        const song1Music = await this.sunoService.waitForTaskCompletion(song1Task.task_id);
+
+        order.song1AudioUrl = song1Music.file_url;
+        await this.firebaseService.updateOrder(orderId, {
+          song1MusicTaskId: song1Task.task_id,
+          song1AudioUrl: song1Music.file_url,
+        });
+
+        await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Müzikler hazır!', 70);
+
+        // Generate video if requested
+        if (order.orderData.deliveryOptions.video) {
+          order.status = 'video_generating';
+          await this.firebaseService.updateOrder(orderId, { status: 'video_generating' });
+          await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Video oluşturuluyor...', 80);
+
+          const videoPrompt = await this.openaiService.generateVideoPrompt(
+            order.orderData.story,
+            order.orderData.song1.type
+          );
+
+          const videoTask = await this.sunoService.generateVideo({
+            prompt: videoPrompt,
+            imageUrl: order.orderData.coverPhoto,
+          });
+
+          const videoResult = await this.sunoService.waitForTaskCompletion(videoTask.task_id);
+          order.videoUrl = videoResult.file_url;
+          await this.firebaseService.updateOrder(orderId, {
+            videoTaskId: videoTask.task_id,
+            videoUrl: videoResult.file_url,
+          });
+        }
+
+        // Complete
+        order.status = 'completed';
+        order.completedAt = new Date();
+        await this.firebaseService.updateOrder(orderId, {
+          status: 'completed',
+          completedAt: order.completedAt,
+        });
+
+        await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Tamamlandı!', 100);
+        await this.whatsappService.sendOrderCompletion(order.whatsappPhone, orderId);
+
+        // Log analytics
+        await this.firebaseService.logAnalytics('order_completed', {
+          orderId,
+          phone: order.whatsappPhone,
+          totalPrice: order.totalPrice,
+        });
+
+        // Deliver files
+        await this.deliverOrder(order);
+
+        // Log analytics: order delivered
+        await this.firebaseService.logAnalytics('order_delivered', {
+          orderId,
+          phone: order.whatsappPhone,
+          songType: order.orderData.song1.type,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } catch (error: any) {
+      console.error('Error starting music generation:', error);
+      order.status = 'failed';
+      order.errorMessage = error.message;
+      await this.firebaseService.updateOrder(orderId, {
+        status: 'failed',
+        errorMessage: error.message,
+      });
+      await this.whatsappService.sendErrorMessage(order.whatsappPhone, orderId, error.message);
     }
   }
 

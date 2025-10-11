@@ -443,6 +443,10 @@ export class FirebaseQueueService {
 
       console.log(`🎉 Job ${job.id} completed successfully`);
 
+      // IMPORTANT: Delete conversation so user can start a new order
+      await this.firebaseService.deleteConversation(phoneNumber);
+      console.log(`🗑️ Conversation deleted for ${phoneNumber} (order completed)`);
+
       // Clean up completed job after 1 hour
       setTimeout(async () => {
         await db.collection(this.COLLECTION).doc(job.id).delete();
@@ -489,6 +493,10 @@ export class FirebaseQueueService {
         error: error.message,
         updatedAt: new Date().toISOString(),
       });
+
+      // IMPORTANT: Delete conversation so user can start a new order
+      await this.firebaseService.deleteConversation(job.phoneNumber);
+      console.log(`🗑️ Conversation deleted for ${job.phoneNumber} (order failed)`);
 
       // Clean up failed job after 24 hours
       setTimeout(async () => {
