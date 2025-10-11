@@ -861,20 +861,54 @@ Sipariş numaranız: ${orderId}`
 
       const baseUrl = process.env.BASE_URL || 'https://bihediye.art';
 
+      // Clean and prepare payment data (remove Turkish characters)
+      const cleanText = (text: string): string => {
+        return text
+          .replace(/ğ/g, 'g')
+          .replace(/Ğ/g, 'G')
+          .replace(/ü/g, 'u')
+          .replace(/Ü/g, 'U')
+          .replace(/ş/g, 's')
+          .replace(/Ş/g, 'S')
+          .replace(/ı/g, 'i')
+          .replace(/İ/g, 'I')
+          .replace(/ö/g, 'o')
+          .replace(/Ö/g, 'O')
+          .replace(/ç/g, 'c')
+          .replace(/Ç/g, 'C')
+          .replace(/[^a-zA-Z0-9\s]/g, ''); // Remove special characters
+      };
+
+      const recipientName = order.orderData.recipientName
+        ? cleanText(order.orderData.recipientName)
+        : 'Musteri';
+
+      const userEmail = `${recipientName.toLowerCase().replace(/\s/g, '')}@bihediye.art`;
+
+      // Clean song type for basket
+      const songTypeClean = cleanText(order.orderData.song1.type);
+
+      console.log('📝 PayTR request data:', {
+        orderId: order.id,
+        email: userEmail,
+        amount: order.totalPrice,
+        userName: recipientName,
+        userPhone: order.whatsappPhone,
+        basketItem: `${songTypeClean} Sarki Hediyesi`,
+      });
+
       // Ödeme token oluştur
       const tokenResponse = await this.paytrService.createPaymentToken(
         {
           orderId: order.id,
-          email: order.orderData.recipientName
-            ? `${order.orderData.recipientName.toLowerCase().replace(/\s/g, '')}@bihediye.art`
-            : 'customer@bihediye.art',
+          email: userEmail,
           amount: order.totalPrice,
           userIp: '85.34.0.1', // WhatsApp kullanıcısı için varsayılan IP
-          userName: order.orderData.recipientName || 'Müşteri',
+          userName: recipientName,
           userPhone: order.whatsappPhone,
           basketItems: [
             {
-              name: `${order.orderData.song1.type} Şarkı Hediyesi`,
+              name: `${songTypeClean} Sarki Hediyesi`,
               price: order.totalPrice,
               quantity: 1,
             },

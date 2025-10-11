@@ -132,8 +132,23 @@ export class PaytrService {
 
       return response.data;
     } catch (error: any) {
-      console.error('❌ PayTR token error:', error.response?.data || error.message);
-      throw new Error(`PayTR token oluşturma hatası: ${error.message}`);
+      console.error('❌ PayTR token error:', {
+        response: error.response?.data,
+        message: error.message,
+        status: error.response?.status,
+      });
+
+      // Log request params for debugging
+      console.error('❌ PayTR request params:', {
+        merchant_id: this.merchantId,
+        merchant_oid: paymentRequest.orderId,
+        email: paymentRequest.email,
+        payment_amount: Math.round(paymentRequest.amount * 100),
+        user_name: paymentRequest.userName,
+        user_phone: paymentRequest.userPhone,
+      });
+
+      throw new Error(`PayTR token oluşturma hatası: ${error.response?.data?.reason || error.message}`);
     }
   }
 
