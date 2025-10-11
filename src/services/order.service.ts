@@ -134,16 +134,19 @@ export class OrderService {
     }
 
     // Process based on current step
-    await this.processConversationStep(conversation, message);
+    const shouldSaveConversation = await this.processConversationStep(conversation, message);
 
-    // Save conversation state to Firebase
-    await this.firebaseService.saveConversation(conversation);
+    // Save conversation state to Firebase (unless processing step returned false)
+    if (shouldSaveConversation !== false) {
+      await this.firebaseService.saveConversation(conversation);
+    }
   }
 
   /**
    * Process conversation step
+   * Returns false if conversation should NOT be saved (e.g., processing step)
    */
-  private async processConversationStep(conversation: ConversationState, message: string): Promise<void> {
+  private async processConversationStep(conversation: ConversationState, message: string): Promise<boolean | void> {
     const from = conversation.phone;
 
     switch (conversation.step) {
@@ -593,7 +596,23 @@ Ne yapmak istersiniz?
 Yeni sipariş için "merhaba" yazabilirsiniz.`
             );
           }
-          return; // Don't save conversation again
+          return false; // Don't save conversation
+        } else {
+          // User sent a different message - inform them about waiting for payment
+          await this.whatsappService.sendTextMessage(
+            from,
+            `⏳ *Ödemeniz bekleniyor...*
+
+Ödeme linkini kullanarak ödemeyi tamamlayın.
+
+💡 *Link geçersiz olduysa:*
+Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.
+
+---
+
+Yeni sipariş başlatmak için *"merhaba"* yazabilirsiniz.`
+          );
+          return false; // Don't save conversation
         }
         break;
     }
@@ -810,12 +829,17 @@ Sipariş numaranız: ${orderId}`
           status: 'failed',
           errorMessage: 'Payment system not configured',
         });
+
+        // Delete conversation immediately if payment system failed
+        await this.firebaseService.deleteConversation(conversation.phone);
+        console.log(`🗑️ Conversation deleted for ${conversation.phone} (payment system not configured)`);
       }
 
-      // Clean up conversation after 5 seconds
-      setTimeout(async () => {
-        await this.firebaseService.deleteConversation(conversation.phone);
-      }, 5000);
+      // IMPORTANT: Do NOT delete conversation here - user needs to stay in "processing" state
+      // Conversation will be deleted when:
+      // 1. Payment succeeds and lyrics are approved (order.service.ts:247, 270)
+      // 2. Music generation completes (firebase-queue.service.ts:447)
+      // 3. Order fails after max retries (firebase-queue.service.ts:498)
 
     } catch (error: any) {
       console.error('Error creating order:', error);
@@ -880,8 +904,8 @@ Sipariş numaranız: ${orderId}`
 
 ---
 
-💡 *Link geçersiz olursa:*
-"1" yazın, yeni link gönderelim.`
+💡 *Link geçersiz olduysa:*
+Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`
         );
 
         // Store payment token in order
