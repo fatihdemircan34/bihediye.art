@@ -335,32 +335,11 @@ export class SunoService {
   private buildMusicStyle(request: MusicGenerationRequest): string {
     const parts: string[] = [];
 
-    // If artist style description provided, use it (ChatGPT should have cleaned it already)
+    // If artist style description provided, use it directly
+    // ChatGPT is responsible for converting artist names to musical descriptions
     if (request.artistStyleDescription) {
       console.log('🎨 Using artist style description:', request.artistStyleDescription);
-
-      // Safety check: detect potential artist name patterns
-      // This is a last resort check - ChatGPT should have already cleaned it
-      const suspiciousPatterns = [
-        /\bstyle\b/i,                      // "X style"
-        /\blike\b/i,                       // "like X"
-        /\btarzında\b/i,                   // "X tarzında"
-        /\bgibi\b/i,                       // "X gibi"
-        /\b[A-Z][a-zğüşöçıİĞÜŞÖÇ]+\s+[A-Z][a-zğüşöçıİĞÜŞÖÇ]+\b/, // Names with Turkish chars "Melike Şahin"
-      ];
-
-      const hasSuspiciousPattern = suspiciousPatterns.some(pattern =>
-        pattern.test(request.artistStyleDescription || '')
-      );
-
-      if (hasSuspiciousPattern) {
-        console.warn('⚠️ Artist style description contains suspicious patterns, falling back to default');
-        console.warn('   Suspicious text:', request.artistStyleDescription);
-        console.warn('   Using safe fallback instead');
-        parts.push(this.translateMusicType(request.songType));
-      } else {
-        parts.push(request.artistStyleDescription);
-      }
+      parts.push(request.artistStyleDescription);
     } else {
       // Normal flow: translate music type
       parts.push(this.translateMusicType(request.songType));

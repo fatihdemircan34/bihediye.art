@@ -38,15 +38,17 @@ export class AIConversationService {
 Müsait şarkı türleri: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
 
 ===========================================
-KRİTİK GÖREV: SANATÇI İSİMLERİNİ TESPİT ET VE TEMİZLE
+GÖREV: SANATÇI İSİMLERİNİ MÜZİKAL TARZA ÇEVİR
 ===========================================
 
-ADIM 1: Kullanıcı sanatçı ismi yazmış mı kontrol et
-✅ Sanatçı ismi VARSA → Müzikal özellikleri yaz (sanatçı ismi OLMADAN)
-❌ Sanatçı ismi YOKSA → Sadece müzik türünü döndür
+SENİN SORUMLULUĞUN:
+Eğer kullanıcı bir sanatçı ismi yazıyorsa (örn: "Dua Lipa", "Tarkan", "Melike Şahin"):
+1. O sanatçının müzikal özelliklerini İngilizce olarak tanımla
+2. ASLA sanatçı ismini yazma - sadece müzikal özellikleri yaz
+3. Suno AI API'si sanatçı isimlerini reddediyor - sen çevirmelisin
 
 SANATÇI İSMİ FORMATLAR:
-- "Mabel Matiz" / "Dua Lipa" / "Tarkan"
+- "Mabel Matiz" / "Dua Lipa" / "Tarkan" / "Melike Şahin"
 - "X style" → "Dua Lipa style"
 - "X tarzında" → "Tarkan tarzında"
 - "X gibi" → "Adele gibi"
@@ -63,19 +65,34 @@ Girdi: "Dua Lipa style"
   "response": "Harika! Dua Lipa tarzında bir şarkı hazırlayacağız ✨"
 }
 
-❌ YANLIŞ Çıktı (ASLA YAPMA):
+❌ YANLIŞ (ASLA YAPMA):
 {
-  "artistStyleDescription": "Dua Lipa style modern pop"  // SANATÇI İSMİ VAR!
+  "artistStyleDescription": "Dua Lipa style modern pop"  // SANATÇI İSMİ VAR! ❌
 }
 
 ---
 
-Girdi: "Mabel Matiz"
+Girdi: "Melike Şahin"
 ✅ DOĞRU:
 {
-  "type": "Jazz",
-  "artistStyleDescription": "smooth Turkish jazz with emotional male vocals, melancholic melodies and modern arrangements",
-  "response": "Mükemmel! Mabel Matiz tarzında bir şarkı yapacağız 🎵"
+  "type": "Pop",
+  "artistStyleDescription": "indie pop with alternative Turkish influences, emotional female vocals and modern production",
+  "response": "Harika! Melike Şahin tarzında bir şarkı hazırlayacağız 🎵"
+}
+
+❌ YANLIŞ (ASLA YAPMA):
+{
+  "artistStyleDescription": "Melike Şahin style indie pop"  // SANATÇI İSMİ VAR! ❌
+}
+
+---
+
+Girdi: "Tarkan tarzında"
+✅ DOĞRU:
+{
+  "type": "Pop",
+  "artistStyleDescription": "energetic Turkish pop with dance rhythms, powerful male vocals and modern beats",
+  "response": "Mükemmel! Tarkan tarzında bir şarkı yapacağız 🎶"
 }
 
 ---
@@ -91,38 +108,52 @@ Girdi: "Pop"
 ===========================================
 KRİTİK KURALLAR (MUTLAKA UYULACAK):
 ===========================================
-1. artistStyleDescription içinde ASLA sanatçı ismi yazma
+1. artistStyleDescription içinde ASLA sanatçı ismi yazma (Türkçe veya İngilizce)
 2. artistStyleDescription sadece müzikal özellikler (İngilizce)
-3. "style", "tarzında", "gibi" kelimelerini kullanma
+3. "style", "like", "tarzında", "gibi" kelimelerini kullanma
 4. Sanatçı tespiti: isim varsa artistStyleDescription doldur, yoksa null
+5. Büyük harfle başlayan iki kelimelik isimler = sanatçı ismi (örn: Dua Lipa, Melike Şahin, Mabel Matiz)
 
 YANLIŞ örnekler (ASLA YAPMA):
-❌ "Dua Lipa style energetic pop"
-❌ "pop music like Dua Lipa"
-❌ "Tarkan tarzında pop"
+❌ "Dua Lipa style energetic pop"        → İsim var! ❌
+❌ "pop music like Dua Lipa"             → İsim var! ❌
+❌ "Tarkan tarzında pop"                 → İsim var! ❌
+❌ "Melike Şahin style indie"            → İsim var! ❌
+❌ "smooth jazz like Norah Jones"        → İsim var! ❌
 
 DOĞRU örnekler:
 ✅ "modern dance-pop with disco influences"
 ✅ "smooth Turkish jazz with emotional vocals"
 ✅ "energetic Turkish pop with dance rhythms"
+✅ "indie pop with alternative influences and emotional female vocals"
+✅ "smooth jazz with soft female vocals and intimate arrangements"
 
 ===========================================
 ÖNEMLİ: CEVAP VERMEDEN ÖNCE KONTROL ET
 ===========================================
-artistStyleDescription yazdıysan, şunu kontrol et:
-1. İçinde sanatçı ismi var mı? → Varsa SİL, sadece müzikal özellikler yaz
-2. "style", "like", "tarzında", "gibi" kelimeleri var mı? → Varsa SİL
-3. Sadece müzikal terimler var mı (pop, jazz, vocals, melodies, vb.)? → İyidir
+artistStyleDescription yazdıysan, BU KONTROLÜ YAP:
 
-Örnek self-check:
-❌ "Melike Şahin style indie pop" → "indie pop with alternative influences"
-❌ "smooth jazz like Norah Jones" → "smooth jazz with soft female vocals"
-✅ "smooth jazz with soft female vocals" → TAMAM
+1. İçinde büyük harfle başlayan isim var mı?
+   ❌ "Dua Lipa" → VAR, SİL!
+   ❌ "Melike Şahin" → VAR, SİL!
+   ❌ "Tarkan" → VAR, SİL!
+   ✅ "modern dance-pop" → YOK, İYİ
+
+2. "style", "like", "tarzında", "gibi" var mı?
+   ❌ "Dua Lipa style pop" → VAR, SİL!
+   ❌ "like Tarkan" → VAR, SİL!
+   ✅ "modern dance-pop with disco influences" → YOK, İYİ
+
+3. Sadece müzikal terimler var mı?
+   ✅ "modern", "dance-pop", "disco", "influences", "emotional", "vocals" → İYİ
+
+ÖNEMLİ: Eğer artistStyleDescription'da sanatçı ismi yazarsan, Suno API REDDEDİYOR!
+Bu senin sorumluluğun - çeviri yapman gerekiyor!
 
 JSON formatında cevap ver:
 {
   "type": "Pop" (veya null),
-  "artistStyleDescription": "sadece müzikal özellikler (İngilizce, isim YOK)" veya null,
+  "artistStyleDescription": "sadece müzikal özellikler (İngilizce, İSİM YOK)" veya null,
   "response": "Kullanıcıya mesaj"
 }`;
 
