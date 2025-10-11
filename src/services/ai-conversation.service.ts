@@ -39,26 +39,38 @@ Müsait şarkı türleri: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostalji
 
 Görevin:
 1. Kullanıcının mesajından şarkı türünü anlamaya çalış
-2. **ÇOK ÖNEMLİ**: Eğer kullanıcı bir SANATÇI İSMİ yazdıysa (örn: Mabel Matiz, Tarkan, Sezen Aksu), o sanatçının müzikal tarzını İNGİLİZCE olarak betimle
-3. Eğer net bir tür belirtmişse, o türü döndür
+2. **ÇOK ÖNEMLİ**: Eğer kullanıcı bir SANATÇI İSMİ yazdıysa, o sanatçının müzikal tarzını İNGİLİZCE olarak betimle
+3. Eğer net bir tür belirtmişse (Pop, Rock, vb.), o türü döndür
 4. Eğer anlaşılmıyorsa, null döndür
+
+**SANATÇI İSMİ ALGILAMA**:
+Bu durumlar sanatçı ismi sayılır:
+- Direkt sanatçı ismi: "Mabel Matiz", "Tarkan", "Dua Lipa", "Ed Sheeran"
+- "X style" veya "X tarzında": "Dua Lipa style", "Tarkan tarzında"
+- "X gibi": "Sezen Aksu gibi", "Adele gibi"
 
 **SANATÇI İSMİ ÖRNEKLER**:
 - "Mabel Matiz" → type: "Jazz", artistStyleDescription: "smooth Turkish jazz with emotional male vocals, melancholic melodies and modern arrangements"
-- "Tarkan" → type: "Pop", artistStyleDescription: "energetic Turkish pop with powerful male vocals and dance rhythms"
-- "Sezen Aksu" → type: "Pop", artistStyleDescription: "classic Turkish pop ballads with soulful female vocals and poetic lyrics"
-- "Ajda Pekkan" → type: "Pop", artistStyleDescription: "upbeat Turkish pop with elegant female vocals and dance beats"
+- "Dua Lipa style" → type: "Pop", artistStyleDescription: "modern dance-pop with catchy hooks, disco influences and powerful female vocals"
+- "Tarkan tarzında" → type: "Pop", artistStyleDescription: "energetic Turkish pop with powerful male vocals and dance rhythms"
+- "Adele gibi" → type: "Pop", artistStyleDescription: "soulful pop ballads with powerful emotional female vocals and piano-driven melodies"
 - "Rock" → type: "Rock", artistStyleDescription: null (bu bir tür, sanatçı değil)
+
+**KRITIK KURAL - SANATÇI İSMİ YASAK**:
+- "artistStyleDescription" içinde ASLA sanatçı ismi kullanma!
+- YANLIŞ: "Dua Lipa style pop music" ❌
+- DOĞRU: "modern dance-pop with catchy hooks and disco influences" ✅
 
 KURALLAR:
 - "type" değeri MUTLAKA yukarıdaki şarkı türlerinden TAM OLARAK biri olmalı
-- "artistStyleDescription" sadece sanatçı ismi yazılmışsa doldurulmalı, İNGİLİZCE olmalı ve SANATÇI İSMİ İÇERMEMELİ (çok önemli!)
-- Eğer sanatçının tarzı anlaşılmıyorsa, en yakın müzik türünü tahmin et ve genel bir betim yaz
+- "artistStyleDescription" sadece sanatçı ismi/referansı varsa doldurulmalı
+- "artistStyleDescription" MUTLAKA İNGİLİZCE olmalı
+- "artistStyleDescription" içinde ASLA sanatçı ismi olmamalı (Suno API reddeder!)
 
 JSON formatında cevap ver:
 {
   "type": "Pop" (veya başka bir tür) veya null (anlaşılmadıysa),
-  "artistStyleDescription": "müzikal özellikler (İngilizce, sanatçı ismi YOK)" veya null,
+  "artistStyleDescription": "müzikal özellikler (İngilizce, SANATÇI İSMİ YOK!)" veya null,
   "response": "Kullanıcıya gönderilecek sıcak, samimi mesaj"
 }`;
 

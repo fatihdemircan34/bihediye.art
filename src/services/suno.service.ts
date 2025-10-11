@@ -338,7 +338,36 @@ export class SunoService {
     // If artist style description provided, use it (it already excludes artist names)
     if (request.artistStyleDescription) {
       console.log('🎨 Using artist style description:', request.artistStyleDescription);
-      parts.push(request.artistStyleDescription);
+
+      // Clean artist style description - remove quotes and check for artist names
+      let cleanedStyle = request.artistStyleDescription
+        .replace(/^["']|["']$/g, '') // Remove leading/trailing quotes
+        .replace(/["']/g, ''); // Remove any remaining quotes
+
+      // Additional safety: Remove common artist name patterns (case-insensitive)
+      const artistNamePatterns = [
+        /\b\w+\s+\w+\s+style\b/gi,  // "Dua Lipa style", "Ed Sheeran style"
+        /\blike\s+\w+\s+\w+\b/gi,   // "like Dua Lipa"
+        /\b\w+\s+\w+\s+tarzında\b/gi, // "Tarkan tarzında"
+      ];
+
+      for (const pattern of artistNamePatterns) {
+        cleanedStyle = cleanedStyle.replace(pattern, '');
+      }
+
+      // Clean up extra spaces and commas
+      cleanedStyle = cleanedStyle
+        .replace(/\s*,\s*,\s*/g, ', ') // Fix double commas
+        .replace(/^\s*,\s*|\s*,\s*$/g, '') // Remove leading/trailing commas
+        .trim();
+
+      if (cleanedStyle) {
+        console.log('🎨 Cleaned artist style:', cleanedStyle);
+        parts.push(cleanedStyle);
+      } else {
+        // Fallback if cleaning removed everything
+        parts.push(this.translateMusicType(request.songType));
+      }
     } else {
       // Normal flow: translate music type
       parts.push(this.translateMusicType(request.songType));
