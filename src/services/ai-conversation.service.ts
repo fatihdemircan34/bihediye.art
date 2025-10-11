@@ -33,45 +33,84 @@ export class AIConversationService {
     response: string;
     artistStyleDescription?: string;
   }> {
-    const prompt = `Kullanıcı şarkı türü seçiyor. Mesajı: "${userMessage}"
+    const prompt = `Sen bir müzik stili çevirme uzmanısın. Kullanıcı şarkı türü seçiyor: "${userMessage}"
 
 Müsait şarkı türleri: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
 
-Görevin:
-1. Kullanıcının mesajından şarkı türünü anlamaya çalış
-2. **ÇOK ÖNEMLİ**: Eğer kullanıcı bir SANATÇI İSMİ yazdıysa, o sanatçının müzikal tarzını İNGİLİZCE olarak betimle
-3. Eğer net bir tür belirtmişse (Pop, Rock, vb.), o türü döndür
-4. Eğer anlaşılmıyorsa, null döndür
+===========================================
+KRİTİK GÖREV: SANATÇI İSİMLERİNİ TESPİT ET VE TEMİZLE
+===========================================
 
-**SANATÇI İSMİ ALGILAMA**:
-Bu durumlar sanatçı ismi sayılır:
-- Direkt sanatçı ismi: "Mabel Matiz", "Tarkan", "Dua Lipa", "Ed Sheeran"
-- "X style" veya "X tarzında": "Dua Lipa style", "Tarkan tarzında"
-- "X gibi": "Sezen Aksu gibi", "Adele gibi"
+ADIM 1: Kullanıcı sanatçı ismi yazmış mı kontrol et
+✅ Sanatçı ismi VARSA → Müzikal özellikleri yaz (sanatçı ismi OLMADAN)
+❌ Sanatçı ismi YOKSA → Sadece müzik türünü döndür
 
-**SANATÇI İSMİ ÖRNEKLER**:
-- "Mabel Matiz" → type: "Jazz", artistStyleDescription: "smooth Turkish jazz with emotional male vocals, melancholic melodies and modern arrangements"
-- "Dua Lipa style" → type: "Pop", artistStyleDescription: "modern dance-pop with catchy hooks, disco influences and powerful female vocals"
-- "Tarkan tarzında" → type: "Pop", artistStyleDescription: "energetic Turkish pop with powerful male vocals and dance rhythms"
-- "Adele gibi" → type: "Pop", artistStyleDescription: "soulful pop ballads with powerful emotional female vocals and piano-driven melodies"
-- "Rock" → type: "Rock", artistStyleDescription: null (bu bir tür, sanatçı değil)
+SANATÇI İSMİ FORMATLAR:
+- "Mabel Matiz" / "Dua Lipa" / "Tarkan"
+- "X style" → "Dua Lipa style"
+- "X tarzında" → "Tarkan tarzında"
+- "X gibi" → "Adele gibi"
 
-**KRITIK KURAL - SANATÇI İSMİ YASAK**:
-- "artistStyleDescription" içinde ASLA sanatçı ismi kullanma!
-- YANLIŞ: "Dua Lipa style pop music" ❌
-- DOĞRU: "modern dance-pop with catchy hooks and disco influences" ✅
+===========================================
+ÖRNEKLER (DİKKATLE İNCELE):
+===========================================
 
-KURALLAR:
-- "type" değeri MUTLAKA yukarıdaki şarkı türlerinden TAM OLARAK biri olmalı
-- "artistStyleDescription" sadece sanatçı ismi/referansı varsa doldurulmalı
-- "artistStyleDescription" MUTLAKA İNGİLİZCE olmalı
-- "artistStyleDescription" içinde ASLA sanatçı ismi olmamalı (Suno API reddeder!)
+Girdi: "Dua Lipa style"
+✅ DOĞRU Çıktı:
+{
+  "type": "Pop",
+  "artistStyleDescription": "modern dance-pop with disco influences, catchy hooks and energetic female vocals",
+  "response": "Harika! Dua Lipa tarzında bir şarkı hazırlayacağız ✨"
+}
+
+❌ YANLIŞ Çıktı (ASLA YAPMA):
+{
+  "artistStyleDescription": "Dua Lipa style modern pop"  // SANATÇI İSMİ VAR!
+}
+
+---
+
+Girdi: "Mabel Matiz"
+✅ DOĞRU:
+{
+  "type": "Jazz",
+  "artistStyleDescription": "smooth Turkish jazz with emotional male vocals, melancholic melodies and modern arrangements",
+  "response": "Mükemmel! Mabel Matiz tarzında bir şarkı yapacağız 🎵"
+}
+
+---
+
+Girdi: "Pop"
+✅ DOĞRU:
+{
+  "type": "Pop",
+  "artistStyleDescription": null,  // Sanatçı yok, sadece tür
+  "response": "Pop müzik seçildi! ✨"
+}
+
+===========================================
+KRİTİK KURALLAR (MUTLAKA UYULACAK):
+===========================================
+1. artistStyleDescription içinde ASLA sanatçı ismi yazma
+2. artistStyleDescription sadece müzikal özellikler (İngilizce)
+3. "style", "tarzında", "gibi" kelimelerini kullanma
+4. Sanatçı tespiti: isim varsa artistStyleDescription doldur, yoksa null
+
+YANLIŞ örnekler (ASLA YAPMA):
+❌ "Dua Lipa style energetic pop"
+❌ "pop music like Dua Lipa"
+❌ "Tarkan tarzında pop"
+
+DOĞRU örnekler:
+✅ "modern dance-pop with disco influences"
+✅ "smooth Turkish jazz with emotional vocals"
+✅ "energetic Turkish pop with dance rhythms"
 
 JSON formatında cevap ver:
 {
-  "type": "Pop" (veya başka bir tür) veya null (anlaşılmadıysa),
-  "artistStyleDescription": "müzikal özellikler (İngilizce, SANATÇI İSMİ YOK!)" veya null,
-  "response": "Kullanıcıya gönderilecek sıcak, samimi mesaj"
+  "type": "Pop" (veya null),
+  "artistStyleDescription": "sadece müzikal özellikler (İngilizce, isim YOK)" veya null,
+  "response": "Kullanıcıya mesaj"
 }`;
 
     try {
