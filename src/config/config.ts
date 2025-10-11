@@ -31,13 +31,24 @@ export const config = {
     serviceAccountPath: process.env.FIREBASE_SERVICE_ACCOUNT_PATH || path.join(process.cwd(), 'serviceAccount.json'),
   },
 
+  // Payment Configuration
+  payment: {
+    provider: (process.env.PAYMENT_PROVIDER || 'paytr') as 'paytr' | 'stripe', // paytr or stripe
+    baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+  },
+
   // PayTR Payment Gateway Configuration
   paytr: {
     merchantId: process.env.PAYTR_MERCHANT_ID || '',
     merchantKey: process.env.PAYTR_MERCHANT_KEY || '',
     merchantSalt: process.env.PAYTR_MERCHANT_SALT || '',
     testMode: process.env.PAYTR_TEST_MODE === '1',
-    baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+  },
+
+  // Stripe Payment Gateway Configuration
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
   },
 
   // Pricing Configuration

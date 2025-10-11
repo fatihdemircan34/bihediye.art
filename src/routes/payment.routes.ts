@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { PaytrService } from '../services/paytr.service';
+import { StripeService } from '../services/stripe.service';
 import { OrderService } from '../services/order.service';
 
 export function createPaymentRouter(
-  paytrService: PaytrService,
+  paytrService: PaytrService | null,
+  stripeService: StripeService | null,
   orderService: OrderService
 ): Router {
   const router = Router();
@@ -144,10 +146,132 @@ export function createPaymentRouter(
   });
 
   /**
+   * Stripe cancelled payment redirect page
+   * User cancelled the payment
+   */
+  router.get('/cancel', (req: Request, res: Response) => {
+    const { orderId } = req.query;
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ödeme İptal Edildi</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+          }
+          .cancel-box {
+            background: rgba(255,255,255,0.1);
+            padding: 60px 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .cancel-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+          }
+          h1 {
+            font-size: 32px;
+            margin-bottom: 20px;
+          }
+          p {
+            font-size: 18px;
+            line-height: 1.6;
+            margin: 15px 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="cancel-box">
+          <div class="cancel-icon">⚠️</div>
+          <h1>Ödeme İptal Edildi</h1>
+          <p>Ödeme işleminiz iptal edildi.</p>
+          <p>Siparişiniz devam etmeyecektir.</p>
+          <p style="margin-top: 30px; font-size: 14px;">Yardım için: destek@bihediye.art</p>
+        </div>
+      </body>
+      </html>
+    `);
+  });
+
+  /**
+   * Stripe Webhook Endpoint
+   * Stripe sends payment events here
+   */
+  router.post('/stripe/webhook', async (req: Request, res: Response): Promise<void> => {
+    if (!stripeService) {
+      res.status(400).send('Stripe not configured');
+      return;
+    }
+
+    try {
+      const signature = req.headers['stripe-signature'] as string;
+
+      if (!signature) {
+        console.error('❌ Missing Stripe signature');
+        res.status(400).send('Missing signature');
+        return;
+      }
+
+      // Verify webhook signature
+      const event = stripeService.verifyWebhookSignature(req.body, signature);
+
+      console.log('📥 Stripe webhook received:', {
+        type: event.type,
+        id: event.id,
+      });
+
+      // Handle the event
+      switch (event.type) {
+        case 'checkout.session.completed': {
+          const session = event.data.object as any;
+          const orderId = session.metadata.orderId;
+
+          console.log(`✅ Stripe payment successful for order: ${orderId}`);
+
+          // Process the payment
+          await orderService.handlePaymentSuccess(orderId);
+          break;
+        }
+
+        case 'checkout.session.expired': {
+          const session = event.data.object as any;
+          const orderId = session.metadata.orderId;
+
+          console.log(`⏰ Stripe checkout expired for order: ${orderId}`);
+          // Optionally handle expired sessions
+          break;
+        }
+
+        default:
+          console.log(`Unhandled Stripe event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error: any) {
+      console.error('Stripe webhook error:', error.message);
+      res.status(400).send(`Webhook Error: ${error.message}`);
+    }
+  });
+
+  /**
    * PayTR Callback/Webhook Endpoint
    * PayTR buraya ödeme sonucunu POST eder
    */
   router.post('/callback', async (req: Request, res: Response): Promise<void> => {
+    if (!paytrService) {
+      res.send('OK');
+      return;
+    }
+
     try {
       console.log('📥 PayTR callback received:', {
         merchant_oid: req.body.merchant_oid,
@@ -241,8 +365,8 @@ export function createPaymentRouter(
         return;
       }
 
-      // Ödeme token kontrolü
-      if (!order.paymentToken) {
+      // Check if PayTR is configured and token exists (PayTR only)
+      if (paytrService && !order.paymentToken) {
         res.status(400).send(`
           <!DOCTYPE html>
           <html>
@@ -308,6 +432,25 @@ export function createPaymentRouter(
               <p>Bu sipariş için ödeme zaten alınmış.</p>
               <p>Sipariş Durumu: <strong>${order.status}</strong></p>
             </div>
+          </body>
+          </html>
+        `);
+        return;
+      }
+
+      // Stripe payments are handled directly via checkout URL
+      // This route is only for PayTR iframe payments
+      if (!paytrService || !order.paymentToken) {
+        res.status(400).send(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Hata</title>
+          </head>
+          <body style="font-family: Arial; text-align: center; padding: 50px;">
+            <h1>⚠️ Ödeme Sayfası Mevcut Değil</h1>
+            <p>Bu sipariş farklı bir ödeme yöntemi kullanıyor.</p>
           </body>
           </html>
         `);

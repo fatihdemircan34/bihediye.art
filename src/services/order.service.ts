@@ -6,6 +6,7 @@ import { WhatsAppService } from './whatsapp.service';
 import { FirebaseService } from './firebase.service';
 import { FirebaseQueueService } from './firebase-queue.service';
 import { PaytrService } from './paytr.service';
+import { StripeService } from './stripe.service';
 import { DiscountService } from './discount.service';
 import { AIConversationService } from './ai-conversation.service';
 import { config } from '../config/config';
@@ -45,6 +46,7 @@ export interface ConversationState {
 export class OrderService {
   private queueService?: FirebaseQueueService;
   private paytrService?: PaytrService;
+  private stripeService?: StripeService;
   private discountService: DiscountService;
   private aiConversationService: AIConversationService;
 
@@ -54,10 +56,12 @@ export class OrderService {
     private whatsappService: WhatsAppService,
     private firebaseService: FirebaseService,
     queueService?: FirebaseQueueService,
-    paytrService?: PaytrService
+    paytrService?: PaytrService,
+    stripeService?: StripeService
   ) {
     this.queueService = queueService;
     this.paytrService = paytrService;
+    this.stripeService = stripeService;
     this.discountService = new DiscountService(firebaseService);
     this.aiConversationService = new AIConversationService(openaiService);
     // Start cleanup job for old conversations
@@ -754,12 +758,14 @@ Teşekkür ederiz! ❤️`
         return;
       }
 
-      // Generate payment link and send
-      if (this.paytrService) {
-        await this.sendPaymentLink(order);
+      // Generate payment link and send (based on config)
+      if (config.payment.provider === 'stripe' && this.stripeService) {
+        await this.sendStripePaymentLink(order);
+      } else if (config.payment.provider === 'paytr' && this.paytrService) {
+        await this.sendPaytrPaymentLink(order);
       } else {
-        // PayTR not configured - inform user
-        console.error('❌ PayTR service not configured - cannot process payment');
+        // Payment service not configured - inform user
+        console.error(`❌ ${config.payment.provider} service not configured - cannot process payment`);
         await this.whatsappService.sendTextMessage(
           conversation.phone,
           `❌ *Ödeme Sistemi Aktif Değil*
@@ -794,9 +800,9 @@ Sipariş numaranız: ${orderId}`
   }
 
   /**
-   * Send payment link to customer
+   * Send PayTR payment link to customer
    */
-  private async sendPaymentLink(order: Order): Promise<void> {
+  private async sendPaytrPaymentLink(order: Order): Promise<void> {
     try {
       if (!this.paytrService) {
         throw new Error('PayTR service not configured');
@@ -865,6 +871,80 @@ Sipariş numaranız: ${orderId}`
       }
     } catch (error: any) {
       console.error('Error sending payment link:', error);
+      await this.whatsappService.sendTextMessage(
+        order.whatsappPhone,
+        `❌ Ödeme linki oluşturulamadı. Lütfen daha sonra tekrar deneyin.`
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Send Stripe payment link to customer
+   */
+  private async sendStripePaymentLink(order: Order): Promise<void> {
+    try {
+      if (!this.stripeService) {
+        throw new Error('Stripe service not configured');
+      }
+
+      const baseUrl = config.payment.baseUrl;
+
+      // Create Stripe Checkout Session
+      const checkoutSession = await this.stripeService.createCheckoutSession(
+        {
+          orderId: order.id,
+          email: order.orderData.recipientName
+            ? `${order.orderData.recipientName.toLowerCase().replace(/\s/g, '')}@bihediye.art`
+            : 'customer@bihediye.art',
+          amount: order.totalPrice,
+          userName: order.orderData.recipientName || 'Müşteri',
+          userPhone: order.whatsappPhone,
+          basketItems: [
+            {
+              name: `${order.orderData.song1.type} Şarkı Hediyesi`,
+              price: order.totalPrice,
+              quantity: 1,
+            },
+          ],
+        },
+        `${baseUrl}/payment/success?orderId=${order.id}`,
+        `${baseUrl}/payment/cancel?orderId=${order.id}`
+      );
+
+      // Send payment link to user
+      await this.whatsappService.sendTextMessage(
+        order.whatsappPhone,
+        `✅ *Sipariş Oluşturuldu!*
+
+🎵 Sipariş No: ${order.id}
+💰 Tutar: ${order.totalPrice} TL
+
+*Ödeme yapmak için:*
+👉 ${checkoutSession.url}
+
+⏰ Link 24 saat geçerlidir.
+
+Ödeme tamamlandıktan sonra şarkınızın hazırlanmasına başlanacaktır!`
+      );
+
+      // Store Stripe session ID in order
+      await this.firebaseService.updateOrder(order.id, {
+        stripeSessionId: checkoutSession.sessionId,
+      });
+
+      // Log analytics: payment link sent
+      await this.firebaseService.logAnalytics('payment_link_sent', {
+        orderId: order.id,
+        phone: order.whatsappPhone,
+        amount: order.totalPrice,
+        provider: 'stripe',
+        timestamp: new Date().toISOString(),
+      });
+
+      console.log(`💳 Stripe payment link sent for order ${order.id}`);
+    } catch (error: any) {
+      console.error('Error sending Stripe payment link:', error);
       await this.whatsappService.sendTextMessage(
         order.whatsappPhone,
         `❌ Ödeme linki oluşturulamadı. Lütfen daha sonra tekrar deneyin.`

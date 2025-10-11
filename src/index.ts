@@ -7,6 +7,7 @@ import { WhatsAppService } from './services/whatsapp.service';
 import { FirebaseService } from './services/firebase.service';
 import { FirebaseQueueService } from './services/firebase-queue.service';
 import { PaytrService } from './services/paytr.service';
+import { StripeService } from './services/stripe.service';
 import { OrderService } from './services/order.service';
 import { DiscountService } from './services/discount.service';
 import { OrderRoutes } from './api/order.routes';
@@ -22,6 +23,7 @@ class App {
   private firebaseService: FirebaseService;
   private queueService: FirebaseQueueService;
   private paytrService?: PaytrService;
+  private stripeService?: StripeService;
   private orderService: OrderService;
   private discountService: DiscountService;
 
@@ -89,22 +91,38 @@ class App {
     );
     console.log('✅ Firebase Queue service initialized - async mode enabled');
 
-    // Initialize PayTR service (if credentials provided)
-    if (config.paytr.merchantId && config.paytr.merchantId !== 'your_merchant_id') {
-      this.paytrService = new PaytrService({
-        merchantId: config.paytr.merchantId,
-        merchantKey: config.paytr.merchantKey,
-        merchantSalt: config.paytr.merchantSalt,
-        testMode: config.paytr.testMode,
-      });
-      console.log('✅ PayTR service initialized (payment gateway enabled)');
-      console.log(`   Merchant ID: ${config.paytr.merchantId}`);
-      console.log(`   Test Mode: ${config.paytr.testMode}`);
-      console.log(`   Base URL: ${config.paytr.baseUrl}`);
-    } else {
-      console.warn('⚠️  PayTR credentials not configured - payment gateway disabled');
-      console.warn('   Orders will be processed without payment');
-      console.warn('   Set PAYTR_MERCHANT_ID, PAYTR_MERCHANT_KEY, PAYTR_MERCHANT_SALT in .env');
+    // Initialize payment services based on configuration
+    console.log(`💳 Payment provider: ${config.payment.provider}`);
+
+    if (config.payment.provider === 'paytr') {
+      // Initialize PayTR service (if credentials provided)
+      if (config.paytr.merchantId && config.paytr.merchantId !== 'your_merchant_id') {
+        this.paytrService = new PaytrService({
+          merchantId: config.paytr.merchantId,
+          merchantKey: config.paytr.merchantKey,
+          merchantSalt: config.paytr.merchantSalt,
+          testMode: config.paytr.testMode,
+        });
+        console.log('✅ PayTR service initialized (payment gateway enabled)');
+        console.log(`   Merchant ID: ${config.paytr.merchantId}`);
+        console.log(`   Test Mode: ${config.paytr.testMode}`);
+      } else {
+        console.warn('⚠️  PayTR credentials not configured - payment gateway disabled');
+        console.warn('   Set PAYTR_MERCHANT_ID, PAYTR_MERCHANT_KEY, PAYTR_MERCHANT_SALT in .env');
+      }
+    } else if (config.payment.provider === 'stripe') {
+      // Initialize Stripe service (if credentials provided)
+      if (config.stripe.secretKey && config.stripe.secretKey !== '') {
+        this.stripeService = new StripeService({
+          secretKey: config.stripe.secretKey,
+          webhookSecret: config.stripe.webhookSecret,
+        });
+        console.log('✅ Stripe service initialized (payment gateway enabled)');
+        console.log(`   Webhook secret configured: ${!!config.stripe.webhookSecret}`);
+      } else {
+        console.warn('⚠️  Stripe credentials not configured - payment gateway disabled');
+        console.warn('   Set STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET in .env');
+      }
     }
 
     // Initialize Discount service
@@ -117,7 +135,8 @@ class App {
       this.whatsappService,
       this.firebaseService,
       this.queueService,
-      this.paytrService
+      this.paytrService,
+      this.stripeService
     );
 
     console.log('✅ Services initialized successfully');
@@ -153,11 +172,21 @@ class App {
     webhookRoutes.setOrderService(this.orderService); // Connect webhook to order service
     this.app.use('/webhook', webhookRoutes.router);
 
-    // Payment routes (PayTR callback and payment pages)
-    if (this.paytrService) {
-      const paymentRouter = createPaymentRouter(this.paytrService, this.orderService);
+    // Payment routes (PayTR/Stripe callback and payment pages)
+    if (this.paytrService || this.stripeService) {
+      const paymentRouter = createPaymentRouter(
+        this.paytrService || null,
+        this.stripeService || null,
+        this.orderService
+      );
       this.app.use('/payment', paymentRouter);
       console.log('✅ Payment routes initialized (/payment/*)');
+      if (this.paytrService) {
+        console.log('   - PayTR callback: /payment/callback');
+      }
+      if (this.stripeService) {
+        console.log('   - Stripe webhook: /payment/stripe/webhook');
+      }
     }
 
     // Admin panel routes
@@ -251,8 +280,12 @@ class App {
       console.log(`🚀 Server running on port ${config.port}`);
       console.log(`📍 Health check: http://localhost:${config.port}/health`);
       console.log(`📱 Bird.com webhook: http://localhost:${config.port}/webhook/bird`);
+      console.log(`💳 Payment provider: ${config.payment.provider}`);
       if (this.paytrService) {
-        console.log(`💳 PayTR callback: http://localhost:${config.port}/payment/callback`);
+        console.log(`   - PayTR callback: http://localhost:${config.port}/payment/callback`);
+      }
+      if (this.stripeService) {
+        console.log(`   - Stripe webhook: http://localhost:${config.port}/payment/stripe/webhook`);
       }
       console.log(`👨‍💼 Admin:`)
       console.log(`   - Orders: http://localhost:${config.port}/admin/orders`);
