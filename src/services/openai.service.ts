@@ -387,22 +387,31 @@ ${userFeedback}
 
       if (request.notes) {
         parts.push(`\n**Kullanıcının ek notları:** ${request.notes}`);
-        parts.push(`\nÖNEMLİ: Eğer ek notlarda "Melike Şahin tarzı", "Norm Ender gibi", "Ceza rap" gibi sanatçı/tarz belirtmişse bunu MUTLAKA tür açıklamasına ekle.`);
       }
+
+      parts.push(`\n🚨 KRITIK KURAL - SANATÇI İSİMLERİ YASAK:`);
+      parts.push(`Suno AI sanatçı isimlerini kabul etmiyor. Eğer notlarda sanatçı ismi varsa, ONU KULLANMA!`);
+      parts.push(`Bunun yerine sanatçının MÜZİKAL ÖZELLİKLERİNİ yaz:`);
+      parts.push(`- ❌ "Lvbel C5 style" → ✅ "fun Turkish rap with upbeat rhythms"`);
+      parts.push(`- ❌ "Melike Şahin tarzı" → ✅ "melancholic Turkish indie with female vocals"`);
+      parts.push(`- ❌ "Ceza and Norm Ender style" → ✅ "conscious rap with heavy beats and storytelling"`);
+      parts.push(`- ❌ "Sezen Aksu tarzı" → ✅ "emotional Turkish pop with classic arrangements"`);
 
       parts.push(`\n**GÖREV:**`);
       parts.push(`Yukarıdaki bilgileri birleştirerek Suno AI için kısa ama zengin bir tür açıklaması oluştur.`);
       parts.push(`- Tür kombinasyonu yapabilirsin: "Jazz Rap", "Arabesk Pop", "Rock Ballad" vb.`);
-      parts.push(`- Sanatçı tarzları ekle: "Melike Şahin tarzı indie", "Ceza tarzı rap", "Sezen Aksu tarzı türkü" vb.`);
+      parts.push(`- SANATÇI İSMİ YERİNE MÜZİKAL ÖZELLİKLER kullan: "melancholic vocals", "heavy beats", "storytelling rap" vb.`);
       parts.push(`- Alt türleri kullan: "Turkish indie jazz", "conscious rap", "emotional arabesque" vb.`);
-      parts.push(`- Enstrüman detayları ekle uygunsa: "with strings", "acoustic guitar", "heavy drums" vb.`);
+      parts.push(`- Enstrüman detayları ekle: "with strings", "acoustic guitar", "heavy drums" vb.`);
       parts.push(`\n**FORMAT:**`);
       parts.push(`Sadece tür açıklamasını yaz, başka hiçbir şey ekleme. Maksimum 15-20 kelime, İngilizce.`);
-      parts.push(`\nÖRNEKLER:`);
-      parts.push(`- "Turkish indie jazz with melancholic vocals, Melike Şahin style"`);
-      parts.push(`- "Conscious rap with heavy beats, Ceza and Norm Ender style"`);
+      parts.push(`HİÇBİR SANATÇI İSMİ OLMAMALI!`);
+      parts.push(`\nÖRNEKLER (SANATÇI İSİMSİZ):`);
+      parts.push(`- "Turkish indie jazz with melancholic vocals and soft instrumentation"`);
+      parts.push(`- "Conscious rap with heavy beats and storytelling"`);
       parts.push(`- "Emotional Turkish arabesque pop with strings"`);
       parts.push(`- "Nostalgic acoustic folk ballad with gentle guitar"`);
+      parts.push(`- "Fun Turkish rap with upbeat rhythms and energetic flow"`);
 
       const requestBody: any = {
         model: this.model,
@@ -420,12 +429,15 @@ ${userFeedback}
       }
 
       const response = await this.client.post('/chat/completions', requestBody);
-      const synthesizedGenre = response.data.choices[0]?.message?.content?.trim();
+      let synthesizedGenre = response.data.choices[0]?.message?.content?.trim();
 
       if (!synthesizedGenre) {
         // Fallback to basic genre
         return `${request.songDetails.type} ${request.songDetails.style}`.toLowerCase();
       }
+
+      // Double-check: Remove any potential artist names that slipped through
+      synthesizedGenre = await this.removeArtistNames(synthesizedGenre);
 
       console.log('✅ Music genre synthesized:', synthesizedGenre);
       return synthesizedGenre;
@@ -433,6 +445,62 @@ ${userFeedback}
       console.error('Error synthesizing music genre:', error.message);
       // Fallback to basic genre on error
       return `${request.songDetails.type} ${request.songDetails.style}`.toLowerCase();
+    }
+  }
+
+  /**
+   * Remove artist names from style description using AI
+   * This is a safety check to catch any artist names that slip through
+   */
+  private async removeArtistNames(styleDescription: string): Promise<string> {
+    try {
+      const cleaningPrompt = `Sen bir müzik tür uzmanısın. Aşağıdaki müzik tür açıklamasında SANATÇI İSİMLERİ var mı kontrol et.
+Eğer varsa, sanatçı ismini ÇIKAR ve yerine o sanatçının MÜZİKAL ÖZELLİKLERİNİ yaz.
+
+MEVCUT AÇIKLAMA:
+${styleDescription}
+
+GÖREV:
+1. Sanatçı isimleri tespit et (Türk veya yabancı tüm sanatçılar)
+2. Sanatçı ismi varsa çıkar
+3. Yerine müzikal özellikleri yaz: "melancholic vocals", "heavy beats", "storytelling", "upbeat rhythms" vb.
+4. Sanatçı ismi yoksa açıklamayı AYNEN döndür
+
+Sadece temizlenmiş tür açıklamasını döndür, başka hiçbir şey yazma. Maksimum 20 kelime, İngilizce.`;
+
+      const requestBody: any = {
+        model: this.model,
+        messages: [
+          {
+            role: 'user',
+            content: cleaningPrompt,
+          },
+        ],
+        max_completion_tokens: 80,
+      };
+
+      if (!this.model.includes('gpt-5')) {
+        requestBody.temperature = 0.5;
+      }
+
+      const response = await this.client.post('/chat/completions', requestBody);
+      const cleanedGenre = response.data.choices[0]?.message?.content?.trim();
+
+      if (!cleanedGenre) {
+        return styleDescription; // Return original if cleaning fails
+      }
+
+      // Log if changes were made
+      if (cleanedGenre !== styleDescription) {
+        console.log('🧹 Artist name detected and removed:');
+        console.log(`   Before: "${styleDescription}"`);
+        console.log(`   After:  "${cleanedGenre}"`);
+      }
+
+      return cleanedGenre;
+    } catch (error: any) {
+      console.error('Error removing artist names:', error.message);
+      return styleDescription; // Return original on error
     }
   }
 

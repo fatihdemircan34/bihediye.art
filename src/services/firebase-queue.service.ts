@@ -236,15 +236,17 @@ export class FirebaseQueueService {
               }
 
               // Save updated job and mark as pending for immediate retry
+              // IMPORTANT: Reset attempts to 0 since this is a correction, not a retry
               await db.collection(this.COLLECTION).doc(job.id).update({
                 'request.style': cleanedStyle,
                 'request.artistStyleDescription': null,
                 status: 'pending',
+                attempts: 0, // Reset attempts - this is a correction, not a failed attempt
                 error: `Artist name removed from style: ${artistName}`,
                 updatedAt: new Date().toISOString(),
               });
 
-              console.log(`✅ Job ${job.id} queued for retry with cleaned style (no artist name)`);
+              console.log(`✅ Job ${job.id} queued for retry with cleaned style (attempts reset to 0)`);
               return; // Exit and let the queue retry this job
             }
 
@@ -322,15 +324,17 @@ export class FirebaseQueueService {
               job.contentModerationRetries = contentRetries + 1;
 
               // Save updated job and mark as pending for retry
+              // IMPORTANT: Reset attempts to 0 since this is lyrics regeneration, not a failed attempt
               await db.collection(this.COLLECTION).doc(job.id).update({
                 'request.lyrics': newLyrics,
                 contentModerationRetries: job.contentModerationRetries,
                 status: 'pending',
+                attempts: 0, // Reset attempts - this is lyrics regeneration, not a failed attempt
                 error: `Content moderation retry ${contentRetries + 1}/${this.MAX_CONTENT_MODERATION_RETRIES}`,
                 updatedAt: new Date().toISOString(),
               });
 
-              console.log(`✅ Job ${job.id} queued for retry with new lyrics`);
+              console.log(`✅ Job ${job.id} queued for retry with new lyrics (attempts reset to 0)`);
               return; // Exit and let the queue retry this job
             } else {
               console.error(`❌ Max content moderation retries reached for job ${job.id}`);
