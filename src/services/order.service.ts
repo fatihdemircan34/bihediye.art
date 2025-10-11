@@ -570,6 +570,32 @@ Ne yapmak istersiniz?
           }
         }
         break;
+
+      case 'processing':
+        // User is waiting for payment - check if they want a new payment link
+        if (message.trim() === '1') {
+          // User wants a new payment link
+          const orders = await this.firebaseService.getOrdersByPhone(from);
+          const pendingOrder = orders.find(o => o.status === 'payment_pending');
+
+          if (pendingOrder) {
+            await this.whatsappService.sendTextMessage(from, '🔄 Yeni ödeme linki oluşturuluyor...');
+
+            // Generate new payment link
+            await this.sendPaymentLink(pendingOrder);
+
+            console.log(`💳 New payment link generated for order ${pendingOrder.id}`);
+          } else {
+            await this.whatsappService.sendTextMessage(
+              from,
+              `❌ Ödeme bekleyen sipariş bulunamadı.
+
+Yeni sipariş için "merhaba" yazabilirsiniz.`
+            );
+          }
+          return; // Don't save conversation again
+        }
+        break;
     }
   }
 
@@ -850,7 +876,12 @@ Sipariş numaranız: ${orderId}`
 
 ⏰ Link 30 dakika geçerlidir.
 
-Ödeme tamamlandıktan sonra şarkınızın hazırlanmasına başlanacaktır!`
+Ödeme tamamlandıktan sonra şarkınızın hazırlanmasına başlanacaktır!
+
+---
+
+💡 *Link geçersiz olursa:*
+"1" yazın, yeni link gönderelim.`
         );
 
         // Store payment token in order
