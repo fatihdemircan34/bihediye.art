@@ -15,6 +15,17 @@ export interface LyricsGenerationRequest {
   notes?: string;
 }
 
+export interface TokenUsage {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+}
+
+export interface LyricsGenerationResult {
+  lyrics: string;
+  tokenUsage?: TokenUsage;
+}
+
 export class OpenAIService {
   private client: AxiosInstance;
   private model: string;
@@ -35,7 +46,7 @@ export class OpenAIService {
    * Generate song lyrics using ChatGPT
    * @param retryForContentModeration - If true, adds extra strict content filtering instructions
    */
-  async generateLyrics(request: LyricsGenerationRequest, retryForContentModeration: boolean = false): Promise<string> {
+  async generateLyrics(request: LyricsGenerationRequest, retryForContentModeration: boolean = false): Promise<LyricsGenerationResult> {
     try {
       const prompt = this.buildLyricsPrompt(request);
 
@@ -112,6 +123,16 @@ export class OpenAIService {
 
       const response = await this.client.post('/chat/completions', requestBody);
 
+      // Track token usage
+      const tokenUsage = response.data.usage;
+      if (tokenUsage) {
+        console.log('📊 OpenAI Token Usage:', {
+          promptTokens: tokenUsage.prompt_tokens,
+          completionTokens: tokenUsage.completion_tokens,
+          totalTokens: tokenUsage.total_tokens,
+        });
+      }
+
       console.log('OpenAI response received:', {
         model: response.data.model,
         choices: response.data.choices?.length,
@@ -133,7 +154,14 @@ export class OpenAIService {
       console.log('- Lines:', lyrics.split('\n').length);
       console.log('- Has tags:', /\[verse\]|\[chorus\]|\[bridge\]/.test(lyrics));
 
-      return lyrics;
+      return {
+        lyrics,
+        tokenUsage: tokenUsage ? {
+          promptTokens: tokenUsage.prompt_tokens,
+          completionTokens: tokenUsage.completion_tokens,
+          totalTokens: tokenUsage.total_tokens,
+        } : undefined,
+      };
     } catch (error: any) {
       console.error('❌ OpenAI API Error Details:');
       console.error('- Message:', error.message);
@@ -224,7 +252,7 @@ export class OpenAIService {
    * Revise lyrics based on user feedback
    * Used for lyrics review system (max 2 revisions)
    */
-  async reviseLyrics(originalLyrics: string, userFeedback: string): Promise<string> {
+  async reviseLyrics(originalLyrics: string, userFeedback: string): Promise<LyricsGenerationResult> {
     try {
       const systemPrompt = `Sen profesyonel bir şarkı sözü editörüsün. Kullanıcının geri bildirimlerine göre şarkı sözlerini düzenliyorsun.
 
@@ -271,6 +299,16 @@ ${userFeedback}
 
       const response = await this.client.post('/chat/completions', requestBody);
 
+      // Track token usage
+      const tokenUsage = response.data.usage;
+      if (tokenUsage) {
+        console.log('📊 OpenAI Token Usage (Revision):', {
+          promptTokens: tokenUsage.prompt_tokens,
+          completionTokens: tokenUsage.completion_tokens,
+          totalTokens: tokenUsage.total_tokens,
+        });
+      }
+
       const revisedLyrics = response.data.choices[0]?.message?.content?.trim();
 
       if (!revisedLyrics) {
@@ -281,7 +319,14 @@ ${userFeedback}
       console.log('- Original length:', originalLyrics.length);
       console.log('- Revised length:', revisedLyrics.length);
 
-      return revisedLyrics;
+      return {
+        lyrics: revisedLyrics,
+        tokenUsage: tokenUsage ? {
+          promptTokens: tokenUsage.prompt_tokens,
+          completionTokens: tokenUsage.completion_tokens,
+          totalTokens: tokenUsage.total_tokens,
+        } : undefined,
+      };
     } catch (error: any) {
       console.error('❌ Error revising lyrics:', error.response?.data || error.message);
       throw new Error(`Şarkı sözü revizyonu hatası: ${error.response?.data?.error?.message || error.message}`);

@@ -232,6 +232,7 @@ export class FirebaseQueueService {
               });
 
               let newLyrics: string;
+              let tokenUsage: any;
 
               if (analysis.hasSensitiveWords && analysis.flaggedWords.length > 0) {
                 // Clean the existing lyrics by replacing sensitive words/sentences
@@ -251,7 +252,24 @@ export class FirebaseQueueService {
                   notes: order.orderData.notes,
                 };
 
-                newLyrics = await this.openaiService.generateLyrics(lyricsRequest, true);
+                const lyricsResult = await this.openaiService.generateLyrics(lyricsRequest, true);
+                newLyrics = lyricsResult.lyrics;
+                tokenUsage = lyricsResult.tokenUsage;
+
+                // Log token usage for content moderation retry
+                if (tokenUsage) {
+                  await this.firebaseService.logAnalytics('openai_token_usage', {
+                    orderId,
+                    phone: phoneNumber,
+                    operation: 'lyrics_regeneration_content_moderation',
+                    retryNumber: contentRetries + 1,
+                    promptTokens: tokenUsage.promptTokens,
+                    completionTokens: tokenUsage.completionTokens,
+                    totalTokens: tokenUsage.totalTokens,
+                    timestamp: new Date().toISOString(),
+                  });
+                }
+
                 console.log(`✅ New ultra-safe lyrics generated (length: ${newLyrics.length})`);
               }
 

@@ -48,12 +48,22 @@ Changed line here`;
               },
             },
           ],
+          usage: {
+            prompt_tokens: 100,
+            completion_tokens: 200,
+            total_tokens: 300,
+          },
         },
       });
 
       const result = await openaiService.reviseLyrics(originalLyrics, userFeedback);
 
-      expect(result).toBe(revisedLyrics);
+      expect(result.lyrics).toBe(revisedLyrics);
+      expect(result.tokenUsage).toEqual({
+        promptTokens: 100,
+        completionTokens: 200,
+        totalTokens: 300,
+      });
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
         '/chat/completions',
         expect.objectContaining({
@@ -80,13 +90,18 @@ Changed line here`;
       mockAxiosInstance.post.mockResolvedValue({
         data: {
           choices: [{ message: { content: revisedLyrics } }],
+          usage: {
+            prompt_tokens: 50,
+            completion_tokens: 60,
+            total_tokens: 110,
+          },
         },
       });
 
       const result = await openaiService.reviseLyrics(originalLyrics, userFeedback);
 
-      expect(result).toContain('[intro]');
-      expect(result).toContain('[verse]');
+      expect(result.lyrics).toContain('[intro]');
+      expect(result.lyrics).toContain('[verse]');
     });
 
     it('should throw error when OpenAI returns empty response', async () => {

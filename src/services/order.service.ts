@@ -462,6 +462,107 @@ Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
           await this.whatsappService.sendTextMessage(from, confirmResult.response);
         }
         break;
+
+      case 'lyrics_review_song1':
+        // User is reviewing lyrics after payment
+        const reviewResult = await this.aiConversationService.parseLyricsReview(message);
+
+        if (!reviewResult.action) {
+          await this.whatsappService.sendTextMessage(from, reviewResult.response);
+          return;
+        }
+
+        if (reviewResult.action === 'approve') {
+          // User approved - start music generation
+          await this.whatsappService.sendTextMessage(from, reviewResult.response);
+
+          // Find order by phone
+          const orders = await this.firebaseService.getOrdersByPhone(from);
+          const pendingOrder = orders.find(o => o.status === 'lyrics_generating' || o.status === 'paid');
+
+          if (pendingOrder) {
+            await this.firebaseService.deleteConversation(from);
+            await this.processOrder(pendingOrder.id);
+          }
+        } else if (reviewResult.action === 'revise') {
+          // User wants revision
+          const revisionCount = conversation.lyricsRevisionCount || 0;
+
+          if (revisionCount >= 2) {
+            // Max revisions reached
+            await this.whatsappService.sendTextMessage(
+              from,
+              `❌ Revizyon hakkınız dolmuştur (2/2).
+
+Şarkı sözleri mevcut haliyle onaylandı. Müzik üretimine geçiyoruz... 🎵`
+            );
+
+            const orders = await this.firebaseService.getOrdersByPhone(from);
+            const pendingOrder = orders.find(o => o.status === 'lyrics_generating' || o.status === 'paid');
+
+            if (pendingOrder) {
+              await this.firebaseService.deleteConversation(from);
+              await this.processOrder(pendingOrder.id);
+            }
+          } else {
+            // Process revision
+            await this.whatsappService.sendTextMessage(from, `${reviewResult.response} ⏳`);
+
+            const orders = await this.firebaseService.getOrdersByPhone(from);
+            const pendingOrder = orders.find(o => o.status === 'lyrics_generating' || o.status === 'paid');
+
+            if (pendingOrder && reviewResult.revisionRequest) {
+              // Revise lyrics
+              const revisionResult = await this.openaiService.reviseLyrics(
+                conversation.tempLyrics!,
+                reviewResult.revisionRequest
+              );
+
+              // Log token usage
+              if (revisionResult.tokenUsage) {
+                await this.firebaseService.logAnalytics('openai_token_usage', {
+                  orderId: pendingOrder.id,
+                  phone: pendingOrder.whatsappPhone,
+                  operation: 'lyrics_revision',
+                  revisionNumber: revisionCount + 1,
+                  promptTokens: revisionResult.tokenUsage.promptTokens,
+                  completionTokens: revisionResult.tokenUsage.completionTokens,
+                  totalTokens: revisionResult.tokenUsage.totalTokens,
+                  timestamp: new Date().toISOString(),
+                });
+              }
+
+              // Update conversation
+              conversation.tempLyrics = revisionResult.lyrics;
+              conversation.lyricsRevisionCount = revisionCount + 1;
+              await this.firebaseService.saveConversation(conversation);
+
+              // Update order
+              await this.firebaseService.updateOrder(pendingOrder.id, {
+                song1Lyrics: revisionResult.lyrics,
+                song1LyricsRevisionCount: revisionCount + 1,
+              });
+
+              // Send revised lyrics
+              const remainingRevisions = 2 - (revisionCount + 1);
+              await this.whatsappService.sendTextMessage(
+                from,
+                `📝 *Revize Edilmiş Şarkı Sözleri:*
+
+${revisionResult.lyrics}
+
+---
+
+✨ *Kalan revizyon hakkınız: ${remainingRevisions}/2*
+
+Ne yapmak istersiniz?
+1️⃣ Onayla (Müzik üretimine geç)
+2️⃣ ${remainingRevisions > 0 ? 'Tekrar Revize Et' : 'Revizyon hakkınız bitti'}`
+              );
+            }
+          }
+        }
+        break;
     }
   }
 
@@ -811,13 +912,91 @@ Sipariş numaranız: ${orderId}`
         order.estimatedDelivery|| new Date(),
       );
 
-      // Start processing
-      await this.processOrder(orderId);
+      // NEW: Generate lyrics first and show to user for review
+      await this.generateAndShowLyrics(orderId);
 
       console.log(`✅ Payment processed for order ${orderId}`);
     } catch (error: any) {
       console.error('Error handling payment success:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Generate lyrics and show to user for review (with 2 revision rights)
+   */
+  private async generateAndShowLyrics(orderId: string): Promise<void> {
+    const order = await this.firebaseService.getOrder(orderId);
+    if (!order) return;
+
+    try {
+      // Generate lyrics (10% progress)
+      order.status = 'lyrics_generating';
+      await this.firebaseService.updateOrder(orderId, { status: 'lyrics_generating' });
+      await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Şarkı sözleri yazılıyor...', 10);
+
+      const lyricsRequest = {
+        songDetails: order.orderData.song1,
+        story: order.orderData.story,
+        recipientName: order.orderData.recipientName,
+        recipientRelation: order.orderData.recipientRelation,
+        includeNameInSong: order.orderData.includeNameInSong,
+        notes: order.orderData.notes,
+      };
+
+      const lyricsResult = await this.openaiService.generateLyrics(lyricsRequest);
+
+      // Log token usage
+      if (lyricsResult.tokenUsage) {
+        await this.firebaseService.logAnalytics('openai_token_usage', {
+          orderId,
+          phone: order.whatsappPhone,
+          operation: 'lyrics_generation',
+          promptTokens: lyricsResult.tokenUsage.promptTokens,
+          completionTokens: lyricsResult.tokenUsage.completionTokens,
+          totalTokens: lyricsResult.tokenUsage.totalTokens,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Save lyrics to order
+      await this.firebaseService.updateOrder(orderId, {
+        song1Lyrics: lyricsResult.lyrics,
+        song1LyricsRevisionCount: 0,
+      });
+
+      // Create conversation for lyrics review
+      const conversation: ConversationState = {
+        phone: order.whatsappPhone,
+        step: 'lyrics_review_song1',
+        data: order.orderData,
+        lastUpdated: new Date(),
+        tempLyrics: lyricsResult.lyrics,
+        lyricsRevisionCount: 0,
+      };
+      await this.firebaseService.saveConversation(conversation);
+
+      // Send lyrics to user
+      await this.whatsappService.sendTextMessage(
+        order.whatsappPhone,
+        `📝 *Şarkı Sözleriniz Hazır!*
+
+${lyricsResult.lyrics}
+
+---
+
+✨ *Dilerseniz şarkı sözüne revizyon verebilirsiniz. Hakkınız 2 tanedir.*
+
+Ne yapmak istersiniz?
+1️⃣ Onayla (Müzik üretimine geç)
+2️⃣ Revizyon İstiyorum (Değiştirmek istediğiniz kısmı yazın)`
+      );
+
+      console.log(`📝 Lyrics generated and sent to user for review: ${orderId}`);
+    } catch (error: any) {
+      console.error('Error generating lyrics for review:', error);
+      // If lyrics generation fails, continue with music generation (fallback)
+      await this.processOrder(orderId);
     }
   }
 
@@ -912,10 +1091,23 @@ Sipariş numaranız: ${orderId}`
         notes: order.orderData.notes,
       };
 
-      const song1Lyrics = await this.openaiService.generateLyrics(lyricsRequest);
+      const lyricsResult = await this.openaiService.generateLyrics(lyricsRequest);
 
-      order.song1Lyrics = song1Lyrics;
-      await this.firebaseService.updateOrder(orderId, { song1Lyrics });
+      // Log token usage
+      if (lyricsResult.tokenUsage) {
+        await this.firebaseService.logAnalytics('openai_token_usage', {
+          orderId,
+          phone: order.whatsappPhone,
+          operation: 'lyrics_generation',
+          promptTokens: lyricsResult.tokenUsage.promptTokens,
+          completionTokens: lyricsResult.tokenUsage.completionTokens,
+          totalTokens: lyricsResult.tokenUsage.totalTokens,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      order.song1Lyrics = lyricsResult.lyrics;
+      await this.firebaseService.updateOrder(orderId, { song1Lyrics: lyricsResult.lyrics });
 
       // Synthesize music genre for Suno AI V5 (combines type + notes + artist styles)
       console.log('🎼 Synthesizing music genre for Suno AI V5...');
@@ -943,7 +1135,7 @@ Sipariş numaranız: ${orderId}`
           phoneNumber: order.whatsappPhone,
           songIndex: 1,
           request: {
-            lyrics: song1Lyrics,
+            lyrics: lyricsResult.lyrics,
             songType: synthesizedGenre, // Use synthesized genre instead of basic type
             style: order.orderData.song1.style,
             vocal: order.orderData.song1.vocal,
@@ -956,7 +1148,7 @@ Sipariş numaranız: ${orderId}`
         // Fallback to sync mode (for development/testing)
         console.log('⚠️ No queue service - using sync mode');
         const song1Task = await this.sunoService.generateMusic({
-          lyrics: song1Lyrics,
+          lyrics: lyricsResult.lyrics,
           songType: order.orderData.song1.type,
           style: order.orderData.song1.style,
           vocal: order.orderData.song1.vocal,
