@@ -221,23 +221,45 @@ export class OpenAIService {
   }
 
   /**
-   * Refine or improve existing lyrics
+   * Revise lyrics based on user feedback
+   * Used for lyrics review system (max 2 revisions)
    */
-  async refineLyrics(lyrics: string, feedback: string): Promise<string> {
+  async reviseLyrics(originalLyrics: string, userFeedback: string): Promise<string> {
     try {
+      const systemPrompt = `Sen profesyonel bir şarkı sözü editörüsün. Kullanıcının geri bildirimlerine göre şarkı sözlerini düzenliyorsun.
+
+ÖNEMLI KURALLAR:
+1. Kullanıcının istediği değişiklikleri yap
+2. Şarkının genel yapısını ve format etiketlerini ([intro], [verse], [chorus], vb.) koru
+3. Şarkının ritmini ve kafiyesini koru
+4. Şarkı sözlerini temiz, pozitif ve içerik denetiminden geçebilir tut
+5. Sadece düzenlenmiş şarkı sözlerini döndür, açıklama yapma
+
+FORMAT KURALI:
+Şarkı sözlerini MUTLAKA etiketlerle formatla:
+[intro], [verse], [pre-chorus], [chorus], [bridge], [outro]`;
+
       const requestBody: any = {
         model: this.model,
         messages: [
           {
             role: 'system',
-            content: 'Sen profesyonel bir şarkı sözü editörüsün. Geri bildirimlere göre şarkı sözlerini iyileştiriyorsun.',
+            content: systemPrompt,
           },
           {
             role: 'user',
-            content: `Aşağıdaki şarkı sözlerini şu geri bildirimlere göre düzenle:\n\n**Şarkı Sözleri:**\n${lyrics}\n\n**Geri Bildirim:**\n${feedback}`,
+            content: `Aşağıdaki şarkı sözlerini kullanıcının geri bildirimlerine göre düzenle:
+
+**MEVCUT ŞARKI SÖZLERİ:**
+${originalLyrics}
+
+**KULLANICININ GERİ BİLDİRİMİ:**
+${userFeedback}
+
+Şarkı sözlerini düzenle ve sadece yeni versiyonu döndür:`,
           },
         ],
-        max_completion_tokens: 1000,
+        max_completion_tokens: 2000,
       };
 
       // Only add temperature for models that support it (not gpt-5)
@@ -245,18 +267,24 @@ export class OpenAIService {
         requestBody.temperature = 0.7;
       }
 
+      console.log('🔄 Revising lyrics based on user feedback...');
+
       const response = await this.client.post('/chat/completions', requestBody);
 
-      const refinedLyrics = response.data.choices[0]?.message?.content?.trim();
+      const revisedLyrics = response.data.choices[0]?.message?.content?.trim();
 
-      if (!refinedLyrics) {
+      if (!revisedLyrics) {
         throw new Error('OpenAI boş yanıt döndürdü');
       }
 
-      return refinedLyrics;
+      console.log('✅ Lyrics revised successfully');
+      console.log('- Original length:', originalLyrics.length);
+      console.log('- Revised length:', revisedLyrics.length);
+
+      return revisedLyrics;
     } catch (error: any) {
-      console.error('Error refining lyrics:', error.response?.data || error.message);
-      throw new Error(`Şarkı sözü düzenleme hatası: ${error.response?.data?.error?.message || error.message}`);
+      console.error('❌ Error revising lyrics:', error.response?.data || error.message);
+      throw new Error(`Şarkı sözü revizyonu hatası: ${error.response?.data?.error?.message || error.message}`);
     }
   }
 
