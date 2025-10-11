@@ -29,12 +29,17 @@ export interface ConversationState {
     | 'cover_photo'
     | 'discount_code'
     | 'confirm'
+    | 'lyrics_review_song1'      // Show lyrics to user
+    | 'lyrics_revision_song1'    // User wants to revise lyrics
     | 'processing';
   data: Partial<OrderRequest>;
   discountCode?: string;
   discountAmount?: number;
   finalPrice?: number;
   lastUpdated: Date;
+  // Temporary storage for lyrics and revision
+  tempLyrics?: string;
+  lyricsRevisionCount?: number;
 }
 
 export class OrderService {
@@ -346,6 +351,8 @@ ${recipientNameResult.name} için özel bir şarkı hazırlıyoruz... Şarkıda 
 📝 *Son bir soru: Ek notlarınız var mı?*
 
 Şarkı ile ilgili özellikle belirtmek istediğiniz bir şey varsa yazabilirsiniz. (Maksimum 300 karakter)
+
+💡 Örneğin: "Sezen Aksu tarzında olsun" veya "Slow tempo olsun"
 
 Yoksa "hayır" veya "yok" yazabilirsiniz.`
         );

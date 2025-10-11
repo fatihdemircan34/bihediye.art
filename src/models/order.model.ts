@@ -53,6 +53,8 @@ export interface Order {
   // Sonuç Dosyaları
   song1Lyrics?: string;
   song2Lyrics?: string;
+  song1LyricsRevisionCount?: number;  // Kaç kez revize edildi (max 2)
+  song2LyricsRevisionCount?: number;  // Kaç kez revize edildi (max 2)
   song1AudioUrl?: string;
   song2AudioUrl?: string;
   videoUrl?: string;

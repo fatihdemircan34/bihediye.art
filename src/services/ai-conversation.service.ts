@@ -502,4 +502,41 @@ JSON formatında cevap ver:
       response: '❌ Siparişi onaylıyor musunuz? "Evet" veya "Hayır" yazın.',
     };
   }
+
+  /**
+   * Parse lyrics review response (approve, revise, or reject)
+   */
+  async parseLyricsReview(userMessage: string): Promise<{
+    action: 'approve' | 'revise' | null;
+    revisionRequest?: string;
+    response: string;
+  }> {
+    const message = userMessage.toLowerCase().trim();
+
+    // Onayla kelimeleri
+    const approveWords = ['onayla', 'onaylıyorum', 'tamam', 'evet', 'güzel', 'süper', 'harika', '1'];
+    // Revize kelimeleri
+    const reviseWords = ['revize', 'düzelt', 'değiştir', 'revize et', 'düzeltme', '2'];
+
+    if (approveWords.some(word => message.includes(word))) {
+      return {
+        action: 'approve',
+        response: '✅ Şarkı sözleri onaylandı! Devam ediyoruz...',
+      };
+    }
+
+    if (reviseWords.some(word => message.includes(word)) || message.length > 15) {
+      // Uzun mesaj = revizyon talebi
+      return {
+        action: 'revise',
+        revisionRequest: userMessage,
+        response: '✏️ Anlad ım! Şarkı sözlerini düzenliyoruz...',
+      };
+    }
+
+    return {
+      action: null,
+      response: '❓ Şarkı sözlerini onaylıyor musunuz yoksa değişiklik mi istiyorsunuz?\n\n1️⃣ Onayla\n2️⃣ Değişiklik İstiyorum (ne değiştirmek istediğinizi yazın)',
+    };
+  }
 }
