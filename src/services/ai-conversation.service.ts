@@ -279,30 +279,41 @@ Kadın sesi, Erkek sesi veya Fark etmez diyebilirsiniz!`,
 
   /**
    * Parse recipient relation
-   * FLEXIBLE: Accepts personal relations AND business/company names
+   * MAXIMUM FLEXIBILITY: Accepts people, businesses, cities, concepts, themes!
    */
   async parseRecipientRelation(userMessage: string): Promise<{ relation: string | null; response: string }> {
-    const prompt = `Kullanıcı hediye/şarkı için kimin olduğunu söylüyor. Mesajı: "${userMessage}"
+    const prompt = `Kullanıcı hediye/şarkı için ne/kim hakkında olduğunu söylüyor. Mesajı: "${userMessage}"
 
-ÇOK ÖNEMLİ: SADECE KİŞİSEL İLİŞKİ DEĞİL, HERHANGİ BİR HEDEF OLABİLİR!
+=========================================
+MAKSIMUM ESNEKLİK - HER ŞEYİ KABUL ET!
+=========================================
 
-KABUL EDİLEN CEVAPLAR:
-✅ Kişiler: Annem, Babam, Sevgilim, Eşim, Arkadaşım, Kardeşim
-✅ İşletmeler: İşletmem, Firmam, Şirketim, Markam, Restoranım, Cafem
-✅ Organizasyonlar: Kulübüm, Takımım, Topluluğum, Derneğim
-✅ Projeler: Projem, Ürünüm, Hizmetim, Websitem
+Bu şarkı HERHANGİ BİR ŞEY HAKKINDA olabilir:
+✅ Kişiler: Annem, Sevgilim, Arkadaşım
+✅ İşletmeler: İşletmem, Firmam, Bi Hediye, Cafe XYZ
+✅ Projeler: Projem, Ürünüm
+✅ Şehirler: İstanbul, Ankara, Paris
+✅ Kavramlar: Aşk, Dostluk, Bir Şehir Aşkı, Özlem
+✅ Temalar: Doğa, Deniz, Yolculuk
 
 ÖRNEKLER:
-Kullanıcı: "işletmem için"
+
+Kullanıcı: "bir sehir aski"
+✅ {
+  "relation": "Bir Şehir Aşkı",
+  "response": "Harika! 'Bir Şehir Aşkı' temasında özel bir şarkı hazırlayacağız 🎵"
+}
+
+Kullanıcı: "istanbul"
+✅ {
+  "relation": "İstanbul",
+  "response": "Mükemmel! İstanbul için özel bir şarkı hazırlıyoruz 🎶"
+}
+
+Kullanıcı: "işletmem"
 ✅ {
   "relation": "İşletmem",
   "response": "Harika! İşletmeniz için özel bir şarkı hazırlayacağız 🎵"
-}
-
-Kullanıcı: "bi hediye"
-✅ {
-  "relation": "Bi Hediye",
-  "response": "Bi Hediye için özel bir şarkı mı? Süper! 🎶"
 }
 
 Kullanıcı: "annem"
@@ -312,19 +323,18 @@ Kullanıcı: "annem"
 }
 
 GÖREV:
-1. Kullanıcının mesajından KİM/NE olduğunu çıkar (kişi, işletme, proje - hepsi olabilir!)
-2. ESNEKLİK GÖSTER - her türlü cevabı kabul et
+1. Kullanıcının mesajından NE/KİM olduğunu çıkar
+2. AŞIRI ESNEK OL - kullanıcı ne demişse AYNEN kabul et
 3. Samimi ve sıcak bir onay mesajı yaz
 4. Sadece tamamen anlamsızsa null döndür
 
 JSON formatında cevap ver:
 {
-  "relation": "çıkarılan ilişki/hedef" veya null,
+  "relation": "çıkarılan şey/kişi/tema" veya null,
   "response": "Samimi onay mesajı"
 }
 
-KRİTİK: Kullanıcı "işletmem", "firmam", "markam" yazarsa - KABUL ET!
-ASLA "Annem, Sevgilim gibi..." diye sınırlama! Çok esnek ol!`;
+KRİTİK: Kullanıcı NE DEMİŞSE kabul et! Şehir, kavram, kişi, işletme - hepsi geçerli!`;
 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.5 });
@@ -332,9 +342,9 @@ ASLA "Annem, Sevgilim gibi..." diye sınırlama! Çok esnek ol!`;
     } catch (error) {
       return {
         relation: null,
-        response: `Bu şarkı kimin için? 😊
+        response: `Bu şarkı ne/kim hakkında? 😊
 
-Kişi (Annem, Sevgilim...), İşletme (Firmam, Markam...) veya başka bir hedef olabilir!`,
+(Kişi, işletme, şehir, kavram - her şey olabilir!)`,
       };
     }
   }
@@ -768,43 +778,69 @@ MEVCUT BİLGİLER (daha önce alındı):
 - İsim geçsin mi: ${existing.includeNameInSong === true ? 'Evet' : existing.includeNameInSong === false ? 'Hayır' : 'YOK'}
 - İsim: ${existing.name || 'YOK'}
 
-ÇOK ÖNEMLİ: ESNEKLİK!
-Bu SADECE kişisel hediye değil, işletme/proje için de olabilir!
+=========================================
+ÇOK ÖNEMLİ: MAKSIMUM ESNEKLİK!
+=========================================
+
+Bu şarkı HERHANGİ BİR ŞEY İÇİN olabilir:
+✅ Kişiler: Annem, Sevgilim, Arkadaşım
+✅ İşletmeler: İşletmem, Firmam, Markam, Bi Hediye
+✅ Projeler: Projem, Ürünüm
+✅ Şehirler: İstanbul, Ankara, İzmir
+✅ Kavramlar: Aşk, Dostluk, Özlem, Bir Şehir Aşkı
+✅ Temalar: Doğa, Deniz, Yolculuk
 
 3 bilgi almalıyız:
-1. İlişki/Hedef: Kişi (Annem, Sevgilim), İşletme (İşletmem, Markam), Proje (Projem)
-2. İsim geçsin mi: Evet/Hayır (işletme için genelde Evet)
-3. İsim: Ayşe, Mehmet, "Bi Hediye", "Cafe XYZ", vb.
+1. İlişki/Hedef/Tema: NE HAKKINDA? (çok geniş kabul et!)
+2. İsim geçsin mi: Evet/Hayır
+3. İsim: Hangi isim geçecek?
 
 GÖREV:
 Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
 DOLU olanları KORU (değiştirme!).
 
+KRİTİK: AŞIRI ESNEK OL!
+- "bir sehir aski" → relation: "Bir Şehir Aşkı" (kabul et!)
+- "istanbul için" → relation: "İstanbul", name: "İstanbul" (kabul et!)
+- "proje" → relation: "Proje" (kabul et!)
+- Kullanıcı NE DEMİŞSE, onu al! SORGULAMADAN kabul et!
+
 ÖRNEKLER (PROGRESSIVE):
 
-Örnek 1:
+Örnek 1: Şehir için şarkı
 Mevcut: relation=YOK, includeNameInSong=YOK, name=YOK
-Kullanıcı: "İşletmem için bir muzik yapamak istiyorum isimi is Bi Hediye"
+Kullanıcı: "bir sehir istanbul için sarki içinde istanbul geçsin"
 ✅ DOĞRU CEVAP:
 {
-  "relation": "İşletmem",
-  "name": "Bi Hediye",
-  "includeNameInSong": null,
-  "response": "Harika! İşletmeniz 'Bi Hediye' için şarkı hazırlayacağız! İşletme adını şarkıda geçirmek ister misiniz? (Evet/Hayır)"
-}
-
-Örnek 2:
-Mevcut: relation="İşletmem", includeNameInSong=YOK, name="Bi Hediye"
-Kullanıcı: "evet"
-✅ DOĞRU CEVAP:
-{
-  "relation": "İşletmem",
-  "name": "Bi Hediye",
+  "relation": "İstanbul",
+  "name": "İstanbul",
   "includeNameInSong": true,
-  "response": "Süper! İşletmeniz için 'Bi Hediye' ismi şarkıda geçecek 🎵"
+  "response": "Harika! İstanbul için özel bir şarkı hazırlıyoruz ve ismi şarkıda geçecek! 🎶"
 }
 
-Örnek 3:
+Örnek 2: Kavram/Tema
+Mevcut: relation=YOK, includeNameInSong=YOK, name=YOK
+Kullanıcı: "bir sehir aski"
+✅ DOĞRU CEVAP:
+{
+  "relation": "Bir Şehir Aşkı",
+  "name": null,
+  "includeNameInSong": null,
+  "response": "Harika! 'Bir Şehir Aşkı' temasında bir şarkı hazırlıyoruz! Şarkıda özel bir isim geçsin mi? 🎵"
+}
+
+Örnek 3: Proje + İsim
+Mevcut: relation="Proje", includeNameInSong=true, name=YOK
+Kullanıcı: "istanbul"
+✅ DOĞRU CEVAP:
+{
+  "relation": "Proje",
+  "name": "İstanbul",
+  "includeNameInSong": true,
+  "response": "Mükemmel! Projeniz 'İstanbul' için şarkı hazırlıyoruz! 🎶"
+}
+
+Örnek 4: İşletme
 Mevcut: relation=YOK, includeNameInSong=YOK, name=YOK
 Kullanıcı: "evet işletmem için bir sarki yapamk istiyorum isim geçsin firmam ise bi hediye"
 ✅ DOĞRU CEVAP:
@@ -817,7 +853,7 @@ Kullanıcı: "evet işletmem için bir sarki yapamk istiyorum isim geçsin firma
 
 JSON CEVAP:
 {
-  "relation": "çıkarılan ilişki/hedef veya mevcut veya null",
+  "relation": "çıkarılan ilişki/hedef/tema veya mevcut veya null",
   "name": "çıkarılan isim veya mevcut veya null",
   "includeNameInSong": true/false veya mevcut veya null,
   "response": "Kullanıcıya mesaj"
@@ -825,10 +861,24 @@ JSON CEVAP:
 
 KRİTİK KURALLAR:
 - Mevcut bilgileri ASLA değiştirme, sadece EKSİK olanları ekle!
-- İşletme/Marka adı varsa (örn: "Bi Hediye"), name'e yaz!
-- "evet", "isim geçsin" → includeNameInSong: true
+- Kullanıcı NE DEMİŞSE kabul et! (şehir, kavram, proje, kişi, işletme - hepsi geçerli)
+- "bir sehir aski" → relation: "Bir Şehir Aşkı" (kabul et, SORMA!)
+- "istanbul" → Eğer daha önce "için şarkı" denmişse, relation VE name olarak kabul et
+- "evet", "geçsin" → includeNameInSong: true
 - "hayır", "gerek yok" → includeNameInSong: false
-- Eksik varsa response'da SAMİMİ bir şekilde sor, ama ESNEKLİK GÖSTER!`;
+
+CEVAP VERMEDE:
+- Eğer relation DOLU ve anlamlıysa, ASLA "hangi ilişki/hedef" SORMA!
+- Sadece eksik varsa (relation=null VEYA includeNameInSong=null VEYA name=null) sor
+- Soru sorarken SAMİMİ ve KISA ol, "ilişki/hedef/proje" gibi teknik terimler kullanma!
+
+✅ DOĞRU SORULAR:
+- "Harika! Şarkıda özel bir isim geçsin mi? 😊"
+- "Süper! Son olarak isim nedir?"
+
+❌ YANLIŞ SORULAR:
+- "Hangi ilişki/hedef için bu şarkıyı hazırlıyoruz?" (ÇOK TEKNİK!)
+- "Kişi, İşletme, Proje?" (KULLANICI KARIŞIR!)`;
 
     try {
       console.log('🔍 parseRecipientInfo INPUT:', {
