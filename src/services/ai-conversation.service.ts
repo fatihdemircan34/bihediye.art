@@ -539,4 +539,165 @@ JSON formatında cevap ver:
       response: '❓ Şarkı sözlerini onaylıyor musunuz yoksa değişiklik mi istiyorsunuz?\n\n1️⃣ Onayla\n2️⃣ Değişiklik İstiyorum (ne değiştirmek istediğinizi yazın)',
     };
   }
+
+  /**
+   * Parse combined song settings (type + style + vocal)
+   * Example: "Pop, Romantik, Kadın" or "Rap romantic female"
+   */
+  async parseSongSettings(userMessage: string): Promise<{
+    type: string | null;
+    style: string | null;
+    vocal: string | null;
+    artistStyleDescription?: string;
+    response: string;
+  }> {
+    const prompt = `Kullanıcı şarkı ayarlarını tek mesajda veriyor: "${userMessage}"
+
+3 bilgi almalıyız:
+1. Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
+2. Tarz: Romantik, Duygusal, Eğlenceli, Sakin
+3. Vokal: Kadın, Erkek, Fark etmez
+
+Kullanıcı hepsini yazmamış olabilir - o zaman eksikleri sor!
+
+Sanatçı ismi varsa müzikal tarza çevir (vokal belirtme!)
+
+JSON cevap ver:
+{
+  "type": "Pop" veya null,
+  "style": "Romantik" veya null,
+  "vocal": "Kadın" veya null,
+  "artistStyleDescription": "müzikal özellikler" veya null,
+  "response": "Kullanıcıya mesaj"
+}
+
+Eksik varsa response'da sor:
+"Harika başlangıç! Eksik bilgiler:
+🎵 Tarz: Romantik, Duygusal, Eğlenceli, Sakin?
+🎤 Vokal: Kadın, Erkek, Fark etmez?"`;
+
+    try {
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      return this.cleanAndParseJSON(result);
+    } catch (error) {
+      return {
+        type: null,
+        style: null,
+        vocal: null,
+        response: `Şarkınızı özelleştirelim! 3 bilgi lazım:
+
+🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
+🎭 Tarz: Romantik, Duygusal, Eğlenceli, Sakin
+🎤 Vokal: Kadın, Erkek, Fark etmez
+
+Örnek: "Pop, Romantik, Kadın"`,
+      };
+    }
+  }
+
+  /**
+   * Parse combined recipient info (relation + name + include name)
+   * Example: "Annem, Evet, Ayşe" or "Sevgilim Mehmet"
+   */
+  async parseRecipientInfo(userMessage: string): Promise<{
+    relation: string | null;
+    name: string | null;
+    includeNameInSong: boolean | null;
+    response: string;
+  }> {
+    const prompt = `Kullanıcı hediye bilgilerini veriyor: "${userMessage}"
+
+3 bilgi almalıyız:
+1. İlişki: Annem, Sevgilim, Arkadaşım, vb.
+2. İsim geçsin mi: Evet/Hayır
+3. İsim (eğer geçecekse): Ayşe, Mehmet, vb.
+
+JSON cevap ver:
+{
+  "relation": "ilişki" veya null,
+  "name": "isim" veya null (sadece geçecekse),
+  "includeNameInSong": true/false/null,
+  "response": "Kullanıcıya mesaj"
+}
+
+Eksik varsa response'da sor.
+Eğer kullanıcı sadece ilişki yazdıysa, isim sorulsun.`;
+
+    try {
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      return this.cleanAndParseJSON(result);
+    } catch (error) {
+      return {
+        relation: null,
+        name: null,
+        includeNameInSong: null,
+        response: `Hediye bilgileri:
+
+💝 Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
+📝 Şarkıda ismini geçirmek ister misiniz? (Evet/Hayır)
+✏️ İsmi nedir? (Geçecekse)
+
+Örnek: "Annem, Evet, Ayşe"`,
+      };
+    }
+  }
+
+  /**
+   * Parse combined story and notes
+   */
+  async parseStoryAndNotes(userMessage: string): Promise<{
+    story: string | null;
+    notes: string | null;
+    response: string;
+  }> {
+    if (userMessage.length > 1200) {
+      return {
+        story: null,
+        notes: null,
+        response: `Mesaj çok uzun (${userMessage.length} karakter). Lütfen 1200 karakter altında yazın.`,
+      };
+    }
+
+    if (userMessage.length < 20) {
+      return {
+        story: null,
+        notes: null,
+        response: `Biraz daha detay verebilir misiniz? 😊
+
+Hikayenizi ve varsa özel isteklerinizi yazın (en az birkaç cümle).`,
+      };
+    }
+
+    const prompt = `Kullanıcı hikaye ve notları yazdı: "${userMessage}"
+
+Kullanıcı "Not:" veya benzer ayırıcı kullanmış olabilir.
+Ayırıcı yoksa tüm metni hikaye olarak al.
+
+JSON cevap ver:
+{
+  "story": "hikaye kısmı",
+  "notes": "not kısmı" veya null,
+  "response": "Samimi onay mesajı"
+}`;
+
+    try {
+      const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      const parsed = this.cleanAndParseJSON(result);
+
+      // Eğer story yok ama notes varsa, hepsini story yap
+      if (!parsed.story && parsed.notes) {
+        parsed.story = parsed.notes;
+        parsed.notes = null;
+      }
+
+      return parsed;
+    } catch (error) {
+      // Fallback: Tüm mesajı hikaye olarak al
+      return {
+        story: userMessage,
+        notes: null,
+        response: '✅ Hikayeniz alındı! Harika bir şarkı çıkacak 💝',
+      };
+    }
+  }
 }

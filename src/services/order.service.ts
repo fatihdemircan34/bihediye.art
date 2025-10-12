@@ -17,27 +17,17 @@ export interface ConversationState {
   phone: string;
   step:
     | 'welcome'
-    | 'song1_type'
-    | 'song1_style'
-    | 'song1_vocal'
-    | 'recipient_relation'
-    | 'name_in_song'
-    | 'recipient_name'
-    | 'story'
-    | 'notes'
-    | 'delivery_options'
-    | 'cover_photo'
-    | 'discount_code'
-    | 'confirm'
-    | 'lyrics_review_song1'      // Show lyrics to user
-    | 'lyrics_revision_song1'    // User wants to revise lyrics
+    | 'song_settings'      // Combined: type + style + vocal
+    | 'recipient_info'      // Combined: relation + name
+    | 'story_and_notes'     // Combined: story + notes
+    | 'confirm'             // Includes discount code
+    | 'lyrics_review_song1'
     | 'processing';
   data: Partial<OrderRequest>;
   discountCode?: string;
   discountAmount?: number;
   finalPrice?: number;
   lastUpdated: Date;
-  // Temporary storage for lyrics and revision
   tempLyrics?: string;
   lyricsRevisionCount?: number;
 }
@@ -153,287 +143,187 @@ export class OrderService {
       case 'welcome':
         await this.whatsappService.sendTextMessage(
           from,
-          `🎵 *Merhaba! bihediye.art'a hoş geldiniz!*
+          `🎵 *bihediye.art'a hoş geldiniz!*
 
-Sevdiklerinize yapay zeka ile hazırlanan özel bir şarkı hediye etmek ister misiniz? 🎁
+Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
 
-💰 Sadece ${config.pricing.songBasePrice} TL karşılığında, hikayenizden ilham alan, 2 dakikadan uzun, profesyonel bir şarkı hazırlıyoruz!
+💰 ${config.pricing.songBasePrice} TL | ⏱️ 2 saat teslimat
 
-✨ *Nasıl bir şarkı düşünüyorsunuz?*
+*Şarkınızı özelleştirelim:*
+🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
+🎭 Tarz: Romantik, Duygusal, Eğlenceli, Sakin
+🎤 Vokal: Kadın, Erkek, Fark etmez
 
-Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal veya Nostaljik türlerinden birini seçebilirsiniz. İstediğiniz türü yazmanız yeterli!
-
-Örneğin: "Pop müzik istiyorum" veya sadece "Rap" yazabilirsiniz 😊
-
-_İstediğiniz zaman "iptal" yazarak vazgeçebilirsiniz_`
+Örnek: "Pop, Romantik, Kadın" veya "Arabesk duygusal"`
         );
-        conversation.step = 'song1_type';
+        conversation.step = 'song_settings';
         break;
 
-      case 'song1_type':
-        const songTypeResult = await this.aiConversationService.parseSongType(message);
+      case 'song_settings':
+        const settingsResult = await this.aiConversationService.parseSongSettings(message);
 
-        if (!songTypeResult.type) {
-          // User didn't select a type or needs help
-          await this.whatsappService.sendTextMessage(from, songTypeResult.response);
-          return;
+        // Check if all required fields are present
+        if (!settingsResult.type || !settingsResult.style || !settingsResult.vocal) {
+          // Missing info - ask again
+          await this.whatsappService.sendTextMessage(from, settingsResult.response);
+          return; // Stay on same step
         }
 
+        // All settings collected!
         conversation.data.song1 = {
-          type: songTypeResult.type,
-          artistStyleDescription: songTypeResult.artistStyleDescription, // Save artist style if provided
+          type: settingsResult.type,
+          style: settingsResult.style,
+          vocal: settingsResult.vocal,
+          artistStyleDescription: settingsResult.artistStyleDescription,
         } as any;
 
-        // Log artist style if detected
-        if (songTypeResult.artistStyleDescription) {
-          console.log(`🎨 Artist style saved for ${from}: ${songTypeResult.artistStyleDescription}`);
-        }
-
-        // Log analytics: song type selected
-        await this.firebaseService.logAnalytics('song_type_selected', {
+        // Log analytics
+        await this.firebaseService.logAnalytics('song_settings_completed', {
           phone: from,
-          songType: songTypeResult.type,
-          hasArtistStyle: !!songTypeResult.artistStyleDescription,
+          songType: settingsResult.type,
+          songStyle: settingsResult.style,
+          vocal: settingsResult.vocal,
+          hasArtistStyle: !!settingsResult.artistStyleDescription,
           timestamp: new Date().toISOString(),
         });
 
+        // Next: recipient info
         await this.whatsappService.sendTextMessage(
           from,
-          `${songTypeResult.response}
+          `💝 *Hediye Bilgileri:*
 
-✨ *Şarkının tarzını belirleyelim mi?*
+Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
+Şarkıda ismini geçirmek ister misiniz? (Evet/Hayır)
+İsmi nedir? (Geçecekse)
 
-Romantik, Duygusal, Eğlenceli veya Sakin tarzlarından hangisini istersiniz?
-
-İstediğinizi yazabilirsiniz! 😊`
+Örnek: "Annem, Evet, Fatma"`
         );
-        conversation.step = 'song1_style';
+        conversation.step = 'recipient_info';
         break;
 
-      case 'song1_style':
-        const songStyleResult = await this.aiConversationService.parseSongStyle(message, conversation.data.song1!.type);
+      case 'recipient_info':
+        const recipientResult = await this.aiConversationService.parseRecipientInfo(message);
 
-        if (!songStyleResult.style) {
-          await this.whatsappService.sendTextMessage(from, songStyleResult.response);
+        // Check if all required fields are present
+        if (!recipientResult.relation || recipientResult.includeNameInSong === null) {
+          await this.whatsappService.sendTextMessage(from, recipientResult.response);
           return;
         }
 
-        conversation.data.song1!.style = songStyleResult.style;
+        // If name should be included but not provided, ask again
+        if (recipientResult.includeNameInSong && !recipientResult.name) {
+          await this.whatsappService.sendTextMessage(
+            from,
+            `İsim geçmesini istiyorsunuz ama ismi yazmadınız 😊
 
-        // Log analytics: song style selected
-        await this.firebaseService.logAnalytics('song_style_selected', {
+Lütfen tekrar yazın. Örnek: "Annem, Evet, Fatma"`
+          );
+          return;
+        }
+
+        // Save recipient info
+        conversation.data.recipientRelation = recipientResult.relation;
+        conversation.data.includeNameInSong = recipientResult.includeNameInSong;
+        conversation.data.recipientName = recipientResult.name || undefined;
+
+        // Log analytics
+        await this.firebaseService.logAnalytics('recipient_info_completed', {
           phone: from,
-          songStyle: songStyleResult.style,
-          songType: conversation.data.song1?.type,
+          relation: recipientResult.relation,
+          includeNameInSong: recipientResult.includeNameInSong,
           timestamp: new Date().toISOString(),
         });
 
+        // Next: story and notes
         await this.whatsappService.sendTextMessage(
           from,
-          `${songStyleResult.response}
+          `📖 *Hikayenizi Anlatın:*
 
-🎤 *Şarkıyı hangi seste dinlemek istersiniz?*
+Şarkıda geçmesini istediğiniz duyguları, anıları, hikayenizi yazın.
 
-Kadın sesi mi, Erkek sesi mi yoksa Fark etmez mi?`
+💡 Varsa özel isteklerinizi de ekleyebilirsiniz (tempo, stil, vb.)
+
+Örnek:
+"10 yıldır evliyiz, her zorluğu birlikte atlattık...
+
+Not: Slow tempo olsun"`
         );
-        conversation.step = 'song1_vocal';
+        conversation.step = 'story_and_notes';
         break;
 
-      case 'song1_vocal':
-        const vocalResult = await this.aiConversationService.parseVocal(message);
+      case 'story_and_notes':
+        const storyResult = await this.aiConversationService.parseStoryAndNotes(message);
 
-        if (!vocalResult.vocal) {
-          await this.whatsappService.sendTextMessage(from, vocalResult.response);
+        if (!storyResult.story) {
+          await this.whatsappService.sendTextMessage(from, storyResult.response);
           return;
         }
 
-        conversation.data.song1!.vocal = vocalResult.vocal;
-        await this.whatsappService.sendTextMessage(
-          from,
-          `${vocalResult.response}
-
-🎁 *Harika! Şarkı ayarları tamamlandı.*
-
-Şimdi biraz daha kişiselleştirelim... Bu şarkıyı hediye edeceğiniz kişi sizin neyiniz?
-
-Örneğin: "Annem", "Sevgilim", "En yakın arkadaşım" gibi...`
-        );
-        conversation.step = 'recipient_relation';
-        break;
-
-      case 'recipient_relation':
-        const relationResult = await this.aiConversationService.parseRecipientRelation(message);
-
-        if (!relationResult.relation) {
-          await this.whatsappService.sendTextMessage(from, relationResult.response);
-          return;
+        // Save story and notes
+        conversation.data.story = storyResult.story;
+        if (storyResult.notes) {
+          conversation.data.notes = storyResult.notes;
         }
 
-        conversation.data.recipientRelation = relationResult.relation;
-        await this.whatsappService.sendTextMessage(
-          from,
-          `${relationResult.response}
-
-💝 *Şarkıda hediye edeceğiniz kişinin ismi geçsin mi?*
-
-"Evet" veya "Hayır" diyebilirsiniz.`
-        );
-        conversation.step = 'name_in_song';
-        break;
-
-      case 'name_in_song':
-        const nameInSongResult = await this.aiConversationService.parseNameInSong(message);
-
-        if (nameInSongResult.answer === null) {
-          await this.whatsappService.sendTextMessage(from, nameInSongResult.response);
-          return;
-        }
-
-        if (nameInSongResult.answer === true) {
-          conversation.data.includeNameInSong = true;
-          await this.whatsappService.sendTextMessage(
-            from,
-            `${nameInSongResult.response}
-
-📝 *Hediye edeceğiniz kişinin adı nedir?*
-
-İsmini yazabilirsiniz:`
-          );
-          conversation.step = 'recipient_name';
-        } else {
-          conversation.data.includeNameInSong = false;
-          await this.whatsappService.sendTextMessage(
-            from,
-            `${nameInSongResult.response}
-
-📖 *Şimdi sıra hikayenizde!*
-
-Şarkıda geçmesini istediğiniz duyguları, anıları, hikayenizi yazın... Ne kadar samimi olursanız, şarkı o kadar özel olacak! 💝
-
-(En az birkaç cümle yazın, maksimum 900 karakter)`
-          );
-          conversation.step = 'story';
-        }
-        break;
-
-      case 'recipient_name':
-        const recipientNameResult = await this.aiConversationService.parseRecipientName(message);
-
-        if (!recipientNameResult.name) {
-          await this.whatsappService.sendTextMessage(from, recipientNameResult.response);
-          return;
-        }
-
-        conversation.data.recipientName = recipientNameResult.name;
-        await this.whatsappService.sendTextMessage(
-          from,
-          `${recipientNameResult.response}
-
-📖 *Şimdi sıra hikayenizde!*
-
-${recipientNameResult.name} için özel bir şarkı hazırlıyoruz... Şarkıda geçmesini istediğiniz duyguları, anıları, hikayenizi yazın. Ne kadar samimi olursanız, şarkı o kadar özel olacak! 💝
-
-(En az birkaç cümle yazın, maksimum 900 karakter)`
-        );
-        conversation.step = 'story';
-        break;
-
-      case 'story':
-        const storyValidation = await this.aiConversationService.validateStory(message);
-
-        if (!storyValidation.isValid) {
-          await this.whatsappService.sendTextMessage(from, storyValidation.response);
-          return;
-        }
-
-        conversation.data.story = message;
-        await this.whatsappService.sendTextMessage(
-          from,
-          `${storyValidation.response}
-
-📝 *Son bir soru: Ek notlarınız var mı?*
-
-Şarkı ile ilgili özellikle belirtmek istediğiniz bir şey varsa yazabilirsiniz. (Maksimum 300 karakter)
-
-💡 Örneğin: "Sezen Aksu tarzında olsun" veya "Slow tempo olsun"
-
-Yoksa "hayır" veya "yok" yazabilirsiniz.`
-        );
-        conversation.step = 'notes';
-        break;
-
-      case 'notes':
-        const notesResult = await this.aiConversationService.parseNotes(message);
-
-        if (notesResult.hasNotes && !notesResult.notes) {
-          // Note is too long
-          await this.whatsappService.sendTextMessage(from, notesResult.response);
-          return;
-        }
-
-        if (notesResult.hasNotes && notesResult.notes) {
-          conversation.data.notes = notesResult.notes;
-        }
-
-        // Directly set delivery options (audio only)
+        // Set delivery options (audio only)
         conversation.data.deliveryOptions = {
           audioFile: true,
           musicPlatform: false,
           video: false
         };
 
-        // Ask for discount code
-        await this.whatsappService.sendTextMessage(
-          from,
-          `${notesResult.response}
+        // Log analytics
+        await this.firebaseService.logAnalytics('story_completed', {
+          phone: from,
+          hasNotes: !!storyResult.notes,
+          timestamp: new Date().toISOString(),
+        });
 
-🎁 *İndirim Kodunuz Var Mı?*
-
-Eğer bir indirim kodunuz varsa şimdi girebilirsiniz.
-
-Yoksa "hayır" veya "yok" yazabilirsiniz.`
-        );
-        conversation.step = 'discount_code';
-        break;
-
-      case 'discount_code':
-        const messageLower = message.toLowerCase().trim();
-
-        // Check if user doesn't have a discount code
-        if (messageLower === 'hayır' || messageLower === 'yok' || messageLower === 'hayir') {
-          await this.sendOrderConfirmation(conversation);
-          break;
-        }
-
-        // Try to apply discount code
-        const basePrice = this.calculatePrice(conversation.data.deliveryOptions!);
-        const discountResult = await this.discountService.validateAndApplyDiscount(
-          message.trim().toUpperCase(),
-          from,
-          basePrice
-        );
-
-        if (discountResult.isValid && discountResult.discountCode) {
-          // Save discount info to conversation
-          conversation.discountCode = discountResult.discountCode.code;
-          conversation.discountAmount = discountResult.discountAmount;
-          conversation.finalPrice = discountResult.finalPrice;
-
-          await this.whatsappService.sendTextMessage(from, discountResult.message);
-          await this.sendOrderConfirmation(conversation);
-        } else {
-          // Invalid code - ask again
-          await this.whatsappService.sendTextMessage(
-            from,
-            `${discountResult.message}
-
-Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
-          );
-          // Stay on discount_code step
-        }
+        // Show order confirmation (includes discount code option)
+        await this.sendOrderConfirmation(conversation);
         break;
 
       case 'confirm':
+        // Handle discount code OR confirmation
+        const messageLower = message.toLowerCase().trim();
+
+        // Check if user is trying to apply discount code
+        if (messageLower !== 'evet' && messageLower !== 'hayır' && messageLower !== '1' && messageLower !== '2'
+            && messageLower !== 'onayla' && messageLower !== 'iptal' && !conversation.discountCode) {
+          // Try to apply discount code
+          const basePrice = this.calculatePrice(conversation.data.deliveryOptions!);
+          const discountResult = await this.discountService.validateAndApplyDiscount(
+            message.trim().toUpperCase(),
+            from,
+            basePrice
+          );
+
+          if (discountResult.isValid && discountResult.discountCode) {
+            // Save discount and show updated confirmation
+            conversation.discountCode = discountResult.discountCode.code;
+            conversation.discountAmount = discountResult.discountAmount;
+            conversation.finalPrice = discountResult.finalPrice;
+
+            await this.whatsappService.sendTextMessage(from, `${discountResult.message}
+
+Güncellenmiş sipariş özeti:`);
+            await this.sendOrderConfirmation(conversation);
+            return;
+          } else {
+            // Invalid code - show error and ask for confirmation
+            await this.whatsappService.sendTextMessage(
+              from,
+              `${discountResult.message}
+
+Yine de devam etmek ister misiniz?
+1️⃣ Evet
+2️⃣ Hayır`
+            );
+            return;
+          }
+        }
+
+        // Parse confirmation
         const confirmResult = await this.aiConversationService.parseConfirmation(message);
 
         if (confirmResult.confirmed === null) {
@@ -442,18 +332,18 @@ Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
         }
 
         if (confirmResult.confirmed === true) {
-          // Log analytics: conversation completed
+          // Log analytics
           await this.firebaseService.logAnalytics('conversation_completed', {
             phone: from,
             songType: conversation.data.song1?.type,
             songStyle: conversation.data.song1?.style,
+            hasDiscount: !!conversation.discountCode,
             timestamp: new Date().toISOString(),
           });
 
-          await this.whatsappService.sendTextMessage(from, confirmResult.response);
           await this.createOrderAndSendPaymentLink(conversation);
         } else {
-          // Log analytics: order cancelled at confirm step
+          // Cancelled
           await this.firebaseService.logAnalytics('conversation_abandoned', {
             phone: from,
             step: 'confirm',
@@ -462,7 +352,7 @@ Başka bir kod denemek isterseniz yazabilirsiniz, yoksa "yok" yazın.`
           });
 
           await this.firebaseService.deleteConversation(from);
-          await this.whatsappService.sendTextMessage(from, confirmResult.response);
+          await this.whatsappService.sendTextMessage(from, '❌ Sipariş iptal edildi. Yeni sipariş için "merhaba" yazın.');
         }
         break;
 
@@ -678,28 +568,21 @@ Yeni sipariş başlatmak için *"merhaba"* yazabilirsiniz.`
       pricingText = `💰 *Toplam: ${finalPrice} TL*`;
     }
 
+    const discountPrompt = discountAmount > 0 ? '' : `
+
+🎁 *İndirim kodunuz var mı?* Kodu yazın veya direkt onaylayın.`;
+
     const summary = `📋 *Sipariş Özeti*
 
-*Şarkınız:*
-🎵 Tür: ${data.song1?.type}
-🎭 Tarz: ${data.song1?.style}
-🎤 Vokal: ${data.song1?.vocal || 'Fark etmez'}
-⏱️ Süre: 2+ dakika
-
-*Hediye Bilgileri:*
-👤 Kime: ${data.recipientRelation}
-${data.includeNameInSong ? `📝 İsim: ${data.recipientName}` : '📝 İsim geçmeyecek'}
-
-*Teslimat:*
-${data.deliveryOptions?.audioFile ? '✅ Ses Dosyası\n' : ''}${data.deliveryOptions?.musicPlatform ? '✅ SoundCloud\n' : ''}${data.deliveryOptions?.video ? '✅ Video\n' : ''}
+🎵 ${data.song1?.type} | ${data.song1?.style} | ${data.song1?.vocal}
+👤 ${data.recipientRelation}${data.includeNameInSong ? ` (${data.recipientName})` : ''}
 
 ${pricingText}
 
-⏰ Teslimat: 2 saat içinde
+⏰ 2 saat teslimat${discountPrompt}
 
-Onaylıyor musunuz?
-1️⃣ Evet, Sipariş Ver
-2️⃣ Hayır, İptal Et`;
+1️⃣ Onayla
+2️⃣ İptal`;
 
     await this.whatsappService.sendTextMessage(conversation.phone, summary);
     conversation.step = 'confirm';
@@ -1005,22 +888,12 @@ Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`
       // Check if this is a WhatsApp order or web order (web orders use email as phone)
       const isWebOrder = order.whatsappPhone.includes('@');
 
-      if (!isWebOrder) {
-        // Only send WhatsApp confirmation for WhatsApp orders
-        await this.whatsappService.sendOrderConfirmation(
-          order.whatsappPhone,
-          orderId,
-          order.totalPrice,
-          order.estimatedDelivery|| new Date(),
-        );
-      }
-
       // For web orders, skip lyrics review and start processing directly
       if (isWebOrder) {
         console.log(`📱 Web order detected - skipping WhatsApp notifications for ${orderId}`);
         await this.processOrder(orderId);
       } else {
-        // NEW: Generate lyrics first and show to user for review (WhatsApp only)
+        // Generate lyrics and show to user (WhatsApp only)
         await this.generateAndShowLyrics(orderId);
       }
 
@@ -1039,10 +912,20 @@ Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`
     if (!order) return;
 
     try {
-      // Generate lyrics (10% progress)
+      // Generate lyrics
       order.status = 'lyrics_generating';
       await this.firebaseService.updateOrder(orderId, { status: 'lyrics_generating' });
-      await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Şarkı sözleri yazılıyor...', 10);
+
+      // Send single combined message: payment success + lyrics generating
+      await this.whatsappService.sendTextMessage(
+        order.whatsappPhone,
+        `✅ *Ödeme Başarılı!*
+
+🎵 Sipariş No: ${orderId}
+💰 ${order.totalPrice} TL
+
+Şarkı sözleriniz yazılıyor... ⏳`
+      );
 
       const lyricsRequest = {
         songDetails: order.orderData.song1,
