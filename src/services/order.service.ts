@@ -160,7 +160,11 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
         break;
 
       case 'song_settings':
-        const settingsResult = await this.aiConversationService.parseSongSettings(message);
+        // Pass existing song data to avoid re-asking for already collected info
+        const settingsResult = await this.aiConversationService.parseSongSettings(
+          message,
+          conversation.data.song1 // Pass existing data if any
+        );
 
         // Check if all required fields are present
         if (!settingsResult.type || !settingsResult.style || !settingsResult.vocal) {

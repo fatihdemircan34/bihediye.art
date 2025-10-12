@@ -543,54 +543,81 @@ JSON formatında cevap ver:
   /**
    * Parse combined song settings (type + style + vocal)
    * Example: "Pop, Romantik, Kadın" or "Rap romantic female"
+   * PROGRESSIVE: Remembers previously collected data
    */
-  async parseSongSettings(userMessage: string): Promise<{
+  async parseSongSettings(
+    userMessage: string,
+    existingData?: { type?: string; style?: string; vocal?: string; artistStyleDescription?: string }
+  ): Promise<{
     type: string | null;
     style: string | null;
     vocal: string | null;
     artistStyleDescription?: string;
     response: string;
   }> {
-    const prompt = `Kullanıcı şarkı ayarlarını tek mesajda veriyor: "${userMessage}"
+    // Start with existing data if available
+    const existing = existingData || {};
 
-3 bilgi almalıyız:
-1. Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
-2. Tarz: Romantik, Duygusal, Eğlenceli, Sakin
-3. Vokal: Kadın, Erkek, Fark etmez
+    const prompt = `Kullanıcı şarkı ayarları veriyor: "${userMessage}"
 
-Kullanıcı hepsini yazmamış olabilir - o zaman eksikleri sor!
+MEVCUT BİLGİLER (daha önce alındı):
+- Tür: ${existing.type || 'YOK'}
+- Tarz: ${existing.style || 'YOK'}
+- Vokal: ${existing.vocal || 'YOK'}
+- Artist Style: ${existing.artistStyleDescription || 'YOK'}
 
-Sanatçı ismi varsa müzikal tarza çevir (vokal belirtme!)
+GÖREV:
+Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
+DOLU olanları KORU (değiştirme!).
 
-JSON cevap ver:
+ÖNEMLİ KURALLAR:
+1. Kullanıcı "arabesk rock" derse → type: "Arabesk" AL (birden fazla tür = ilk türü al)
+2. Kullanıcı "eğlenceli çoşturan" derse → style: "Eğlenceli" AL
+3. Kullanıcı "fark etmez" derse → vocal: "Fark etmez" AL
+4. Sanatçı ismi varsa (örn: "Melike Şahin tarzı") → artistStyleDescription'a müzikal tarza çevir
+5. ESNEKLİK: Kullanıcı tam kelimeyi yazmasa da anla (örn: "coşkan" → "Eğlenceli")
+
+TÜR SEÇENEKLERİ: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
+TARZ SEÇENEKLERİ: Romantik, Duygusal, Eğlenceli, Sakin
+VOKAL SEÇENEKLERİ: Kadın, Erkek, Fark etmez
+
+JSON CEVAP:
 {
-  "type": "Pop" veya null,
-  "style": "Romantik" veya null,
-  "vocal": "Kadın" veya null,
-  "artistStyleDescription": "müzikal özellikler" veya null,
-  "response": "Kullanıcıya mesaj"
+  "type": "çıkarılan tür veya mevcut tür veya null",
+  "style": "çıkarılan tarz veya mevcut tarz veya null",
+  "vocal": "çıkarılan vokal veya mevcut vokal veya null",
+  "artistStyleDescription": "müzikal özellikler veya null",
+  "response": "Samimi mesaj"
 }
 
-Eksik varsa response'da sor:
-"Harika başlangıç! Eksik bilgiler:
-🎵 Tarz: Romantik, Duygusal, Eğlenceli, Sakin?
-🎤 Vokal: Kadın, Erkek, Fark etmez?"`;
+CEVAP KURALLARI:
+- Eğer HERŞEYİ topladıysan: "Harika! Arabesk-Rock karışımı, eğlenceli bir şarkı hazırlıyoruz! 🎵"
+- Eğer hala eksik varsa: "Eksik bilgiler: [sadece eksikleri listele]"
+- ASLA dolu bilgiyi tekrar sorma!`;
 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
-      return this.cleanAndParseJSON(result);
-    } catch (error) {
+      const parsed = this.cleanAndParseJSON(result);
+
+      // Merge with existing data (preserve what was already collected)
       return {
-        type: null,
-        style: null,
-        vocal: null,
-        response: `Şarkınızı özelleştirelim! 3 bilgi lazım:
+        type: parsed.type || existing.type || null,
+        style: parsed.style || existing.style || null,
+        vocal: parsed.vocal || existing.vocal || null,
+        artistStyleDescription: parsed.artistStyleDescription || existing.artistStyleDescription,
+        response: parsed.response,
+      };
+    } catch (error) {
+      // Fallback: preserve existing data
+      return {
+        type: existing.type || null,
+        style: existing.style || null,
+        vocal: existing.vocal || null,
+        artistStyleDescription: existing.artistStyleDescription,
+        response: `Şarkınızı özelleştirelim! Eksik bilgiler:
 
-🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
-🎭 Tarz: Romantik, Duygusal, Eğlenceli, Sakin
-🎤 Vokal: Kadın, Erkek, Fark etmez
-
-Örnek: "Pop, Romantik, Kadın"`,
+${!existing.type ? '🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik\n' : ''}${!existing.style ? '🎭 Tarz: Romantik, Duygusal, Eğlenceli, Sakin\n' : ''}${!existing.vocal ? '🎤 Vokal: Kadın, Erkek, Fark etmez\n' : ''}
+Örnek: "Arabesk Rock, Eğlenceli"`,
       };
     }
   }
