@@ -605,6 +605,14 @@ GÖREV:
 Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
 DOLU olanları KORU (değiştirme!).
 
+**KRİTİK İSTİSNA: DÜZELTME (CORRECTION) ALGILA!**
+Eğer kullanıcı "değil", "demedim", "yanlış", "hayır öyle değil" gibi kelimeler kullanıyorsa:
+→ Bu bir DÜZELTME! Mevcut veriyi DEĞİŞTİR!
+
+Örnekler:
+- "sakin demedim pozitif dedim" → style'ı "Sakin"den "Eğlenceli"ye DEĞİŞTİR
+- "kadın değil erkek olsun" → vocal'i "Kadın"dan "Erkek"e DEĞİŞTİR
+
 =========================================
 ÇOK ÖNEMLİ: ESNEKLİK!
 =========================================
@@ -620,13 +628,16 @@ TÜR: HERHANGİ BİR MÜZİK TÜRÜ KABULEDİLİR!
 
 TARZ: HERHANGİ BİR TARZ/MOOD KABULEDİLİR!
 ✅ Önerilen: Romantik, Duygusal, Eğlenceli, Sakin
-✅ Ama bunlarla sınırlı değil! Kullanıcı başka tarz yazarsa KABUL ET:
-  - "çoşturan", "enerjik", "coşkan" → style: "Eğlenceli"
-  - "hüzünlü", "ağlatan" → style: "Duygusal"
-  - "aşk", "sevgi" → style: "Romantik"
-  - "yavaş", "rahat" → style: "Sakin"
-  - "hareketli" → style: "Hareketli"
-  - "neşeli" → style: "Neşeli"
+✅ Ama bunlarla sınırlı değil! Kullanıcı başka tarz yazarsa AYNEN KABUL ET:
+  - "pozitif" → style: "Pozitif" (aynen kullan!)
+  - "çoşturan" → style: "Çoşturan" (aynen kullan!)
+  - "hareketli" → style: "Hareketli" (aynen kullan!)
+  - "neşeli" → style: "Neşeli" (aynen kullan!)
+
+KRİTİK: Kullanıcı NE DEMİŞSE, AYNEN style'a yaz!
+Mapping YAPMA! Suno AI zaten anlayacak.
+Kullanıcı "pozitif" dediyse → style: "Pozitif" (not "Eğlenceli"!)
+Kullanıcı "rahatlatıcı" dediyse → style: "Rahatlatıcı" (not "Sakin"!)
 
 VOKAL:
 ✅ Kadın, Erkek, Fark etmez
@@ -646,7 +657,7 @@ Mevcut bilgileri ASLA değiştirme, sadece EKSİK olanları ekle!
 
 CONCRETE ÖRNEKLER:
 
-Örnek 1:
+Örnek 1: Normal progression
 Mevcut: type=YOK, style=YOK, vocal=YOK
 Kullanıcı: "Arabesk Rock türü olsun anadolu ateşi gibi"
 ✅ DOĞRU CEVAP:
@@ -658,28 +669,37 @@ Kullanıcı: "Arabesk Rock türü olsun anadolu ateşi gibi"
   "response": "Harika! Arabesk-Rock tarzı seçildi 🎸 Şimdi tarz olarak Romantik, Duygusal, Eğlenceli veya Sakin hangisi olsun?"
 }
 
-Örnek 2:
-Mevcut: type="Arabesk", style=YOK, vocal=YOK, artistStyleDescription="energetic..."
-Kullanıcı: "Fark etmez"
+Örnek 2: Filling missing data
+Mevcut: type="Newage", style="Sakin", vocal=YOK
+Kullanıcı: "kadın olsun"
 ✅ DOĞRU CEVAP:
 {
-  "type": "Arabesk",
-  "style": null,
-  "vocal": "Fark etmez",
-  "artistStyleDescription": "energetic Anatolian rock with arabesque-rock fusion",
-  "response": "Süper! Şimdi sadece tarz seçimi kaldı. Romantik, Duygusal, Eğlenceli veya Sakin? 🎵"
+  "type": "Newage",
+  "style": "Sakin",
+  "vocal": "Kadın",
+  "response": "Mükemmel! Newage tarzında Sakin bir şarkı, Kadın sesiyle hazırlıyoruz! 🎵"
 }
 
-Örnek 3:
-Mevcut: type="Arabesk", style=YOK, vocal="Fark etmez", artistStyleDescription="..."
-Kullanıcı: "Çoşturan bir müzik olsun"
+Örnek 3: DÜZELTME - User corrects wrong data
+Mevcut: type="Newage", style="Sakin", vocal=YOK
+Kullanıcı: "sakin demedim pozitif dedim kadın olsun"
 ✅ DOĞRU CEVAP:
 {
-  "type": "Arabesk",
-  "style": "Eğlenceli",
-  "vocal": "Fark etmez",
-  "artistStyleDescription": "energetic Anatolian rock with arabesque-rock fusion",
-  "response": "Mükemmel! Arabesk-Rock tarzında Eğlenceli bir şarkı hazırlıyoruz! 🎵"
+  "type": "Newage",
+  "style": "Pozitif",
+  "vocal": "Kadın",
+  "response": "Anladım! Newage tarzında Pozitif bir şarkı, Kadın sesiyle hazırlıyoruz! 🎵"
+}
+
+Örnek 4: DÜZELTME - Simple correction
+Mevcut: type="Pop", style="Romantik", vocal="Kadın"
+Kullanıcı: "kadın değil erkek olsun"
+✅ DOĞRU CEVAP:
+{
+  "type": "Pop",
+  "style": "Romantik",
+  "vocal": "Erkek",
+  "response": "Düzeltildi! Pop tarzında Romantik bir şarkı, Erkek sesiyle hazırlıyoruz! 🎵"
 }
 
 JSON CEVAP FORMATI:
