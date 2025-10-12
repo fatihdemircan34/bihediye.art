@@ -591,9 +591,25 @@ JSON CEVAP:
 }
 
 CEVAP KURALLARI:
-- Eğer HERŞEYİ topladıysan: "Harika! Arabesk-Rock karışımı, eğlenceli bir şarkı hazırlıyoruz! 🎵"
-- Eğer hala eksik varsa: "Eksik bilgiler: [sadece eksikleri listele]"
-- ASLA dolu bilgiyi tekrar sorma!`;
+- Eğer HERŞEYİ topladıysan:
+  "Harika! ${type} tarzında ${style} bir şarkı hazırlıyoruz! 🎵"
+  (örnek: "Harika! Arabesk tarzında Eğlenceli bir şarkı hazırlıyoruz! 🎵")
+
+- Eğer hala eksik varsa, SAMİMİ ve DOĞAL bir şekilde sor:
+
+  ✅ DOĞRU ÖRNEKLER:
+  - "Harika başlangıç! Bir de hangi seste olsun? Kadın, Erkek veya Fark etmez 😊"
+  - "Pop müzik güzel seçim! Peki tarz olarak Romantik mi, Duygusal mı, Eğlenceli mi yoksa Sakin mi istersiniz? 🎵"
+  - "Süper! Son olarak vokal tercihiniz? Kadın sesi, Erkek sesi veya Fark etmez 🎤"
+
+  ❌ YANLIŞ ÖRNEKLER (ASLA KULLANMA):
+  - "Eksik bilgiler: [vocal, style]" ❌ TEKNİK GÖRÜNÜYOR
+  - "Lütfen vocal ve style belirtin" ❌ ROBOT GİBİ
+  - "Eksik: Vokal" ❌ KISA VE KURU
+
+- ASLA dolu bilgiyi tekrar sorma!
+- ASLA teknik terimler kullanma (vocal, style, type yerine: ses, tarz, tür)
+- Emoji kullan ama fazla abartma (1-2 tane yeterli)`;
 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
