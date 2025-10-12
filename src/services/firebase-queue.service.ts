@@ -182,29 +182,13 @@ export class FirebaseQueueService {
         // Music already exists, skip generation (retry scenario)
         storageUrl = order.song1AudioUrl;
         console.log(`♻️ Using existing music from previous attempt: ${storageUrl.substring(0, 100)}...`);
-        await this.updateJobProgress(job.id, 70);
       } else {
         // Generate music (first attempt or no existing audio)
-        await this.updateJobProgress(job.id, 10);
-
-        // Send status update to user ONLY on first attempt (25% - after lyrics 10%)
-        if (job.attempts === 1) {
-          await this.whatsappService.sendProgressUpdate(
-            phoneNumber,
-            orderId,
-            'Müzik oluşturuluyor...',
-            25
-          );
-        }
-
-        // Generate music using Suno AI (async mode - returns task ID)
-        await this.updateJobProgress(job.id, 30);
         const musicTask = await this.sunoService.generateMusic(request);
 
         console.log(`✅ Music generation task created for job ${job.id}: ${musicTask.task_id}`);
 
         // Wait for music generation to complete (Suno is async, polls every 5 seconds)
-        await this.updateJobProgress(job.id, 40);
         let musicResult;
 
         try {
@@ -364,41 +348,15 @@ export class FirebaseQueueService {
           throw new Error('Music generation failed - no file URL returned');
         }
 
-        await this.updateJobProgress(job.id, 60);
-
-        // Send progress update: Music generated, downloading (60%) - ONLY on first attempt
-        if (job.attempts === 1) {
-          await this.whatsappService.sendProgressUpdate(
-            phoneNumber,
-            orderId,
-            'Müzik oluşturuldu, indiriliyor...',
-            60
-          );
-        }
-
         // Download audio from Suno URL
         console.log(`📥 Downloading audio from Suno...`);
         const audioBuffer = await this.sunoService.downloadFile(musicResult.file_url);
         console.log(`✅ Audio downloaded: ${(audioBuffer.length / 1024 / 1024).toFixed(2)} MB`);
 
-        await this.updateJobProgress(job.id, 65);
-
-        // Send progress update: Uploading to storage (65%) - ONLY on first attempt
-        if (job.attempts === 1) {
-          await this.whatsappService.sendProgressUpdate(
-            phoneNumber,
-            orderId,
-            'Yükleniyor...',
-            65
-          );
-        }
-
         // Upload to Firebase Storage
         console.log(`📤 Uploading audio to Firebase Storage...`);
         storageUrl = await this.firebaseService.uploadAudio(orderId, songIndex, audioBuffer);
         console.log(`✅ Audio uploaded to Storage: ${storageUrl}`);
-
-        await this.updateJobProgress(job.id, 70);
 
         // Save Storage URL to order immediately (so retry can use it)
         await this.firebaseService.updateOrder(orderId, {
@@ -412,31 +370,9 @@ export class FirebaseQueueService {
         status: 'completed',
       });
 
-      await this.updateJobProgress(job.id, 80);
-
-      // Send progress update: Sending to WhatsApp (80%) - ONLY on first attempt
-      if (job.attempts === 1) {
-        await this.whatsappService.sendProgressUpdate(
-          phoneNumber,
-          orderId,
-          'Şarkınız hazır, gönderiliyor...',
-          80
-        );
-      }
-
       // Send music file to user via WhatsApp (using Storage URL)
       console.log(`📤 Sending music file to user via WhatsApp...`);
       await this.whatsappService.sendAudioMessage(phoneNumber, storageUrl);
-
-      await this.updateJobProgress(job.id, 100);
-
-      // Send completion message (100%)
-      await this.whatsappService.sendProgressUpdate(
-        phoneNumber,
-        orderId,
-        'Tamamlandı! ✅',
-        100
-      );
 
       await this.whatsappService.sendOrderCompletion(phoneNumber, orderId);
 
