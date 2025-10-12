@@ -30,12 +30,13 @@ export class FirebaseQueueService {
   private firebaseService: FirebaseService;
   private whatsappService: WhatsAppService;
   private openaiService: OpenAIService;
-  private isProcessing: boolean = false;
+  private processingJobs: Set<string> = new Set(); // Track concurrent jobs
   private processingInterval?: NodeJS.Timeout;
   private readonly COLLECTION = 'bihediye_music_queue';
   private readonly POLL_INTERVAL = 2000; // 2 seconds
   private readonly MAX_ATTEMPTS = 3;
   private readonly MAX_CONTENT_MODERATION_RETRIES = 2; // Max retries for content moderation
+  private readonly MAX_CONCURRENT_JOBS = 10; // Suno API limit: 20/10s, using 10 for safety
 
   constructor(
     sunoService: SunoService,
@@ -90,15 +91,20 @@ export class FirebaseQueueService {
    * Start processing jobs from Firebase queue
    */
   private startProcessing(): void {
-    console.log('🔄 Starting Firebase queue processor...');
+    console.log(`🔄 Starting Firebase queue processor (max ${this.MAX_CONCURRENT_JOBS} concurrent jobs)...`);
 
     this.processingInterval = setInterval(async () => {
-      if (this.isProcessing) {
-        return; // Already processing a job
+      // Check if we can process more jobs
+      if (this.processingJobs.size >= this.MAX_CONCURRENT_JOBS) {
+        return; // Max concurrent jobs reached
       }
 
       try {
-        await this.processNextJob();
+        // Try to process multiple jobs up to MAX_CONCURRENT_JOBS
+        const availableSlots = this.MAX_CONCURRENT_JOBS - this.processingJobs.size;
+        for (let i = 0; i < availableSlots; i++) {
+          await this.processNextJob();
+        }
       } catch (error: any) {
         console.error('Queue processor error:', error.message);
       }
@@ -129,8 +135,10 @@ export class FirebaseQueueService {
     job.createdAt = new Date(job.createdAt);
     job.updatedAt = new Date(job.updatedAt);
 
+    // Add to processing set
+    this.processingJobs.add(job.id);
+
     // Mark as processing
-    this.isProcessing = true;
     job.status = 'processing';
     job.processingStartedAt = new Date();
     job.attempts += 1;
@@ -143,16 +151,19 @@ export class FirebaseQueueService {
       updatedAt: job.updatedAt.toISOString(),
     });
 
-    console.log(`▶️  Processing job ${job.id} (attempt ${job.attempts})`);
+    console.log(`▶️  Processing job ${job.id} (attempt ${job.attempts}) [${this.processingJobs.size}/${this.MAX_CONCURRENT_JOBS} concurrent]`);
 
-    try {
-      await this.processMusicGeneration(job);
-    } catch (error: any) {
-      console.error(`❌ Job ${job.id} failed:`, error.message);
-      await this.handleJobFailure(job, error);
-    } finally {
-      this.isProcessing = false;
-    }
+    // Process async (don't block)
+    this.processMusicGeneration(job)
+      .catch(async (error: any) => {
+        console.error(`❌ Job ${job.id} failed:`, error.message);
+        await this.handleJobFailure(job, error);
+      })
+      .finally(() => {
+        // Remove from processing set
+        this.processingJobs.delete(job.id);
+        console.log(`✅ Job ${job.id} finished [${this.processingJobs.size}/${this.MAX_CONCURRENT_JOBS} concurrent]`);
+      });
   }
 
   /**
