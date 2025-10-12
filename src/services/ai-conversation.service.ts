@@ -570,18 +570,60 @@ GÖREV:
 Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
 DOLU olanları KORU (değiştirme!).
 
-ÖNEMLİ KURALLAR:
-1. Kullanıcı "arabesk rock" derse → type: "Arabesk" AL (birden fazla tür = ilk türü al)
-2. Kullanıcı "eğlenceli çoşturan" derse → style: "Eğlenceli" AL
-3. Kullanıcı "fark etmez" derse → vocal: "Fark etmez" AL
-4. Sanatçı ismi varsa (örn: "Melike Şahin tarzı") → artistStyleDescription'a müzikal tarza çevir
-5. ESNEKLİK: Kullanıcı tam kelimeyi yazmasa da anla (örn: "coşkan" → "Eğlenceli")
+ÖNEMLİ KURALLAR - DİKKATLE OKU:
+1. "arabesk rock" → type: "Arabesk", artistStyleDescription: "arabesque-rock fusion"
+2. "eğlenceli", "çoşturan", "enerjik", "coşkan" → style: "Eğlenceli"
+3. "fark etmez", "farketmez", "önemli değil" → vocal: "Fark etmez"
+4. "anadolu ateşi gibi" → artistStyleDescription: "energetic Anatolian rock"
+5. "romantik", "aşk", "sevgi" → style: "Romantik"
+6. "duygusal", "hüzünlü", "ağlatan" → style: "Duygusal"
+7. "sakin", "yavaş", "rahat" → style: "Sakin"
 
 TÜR SEÇENEKLERİ: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
 TARZ SEÇENEKLERİ: Romantik, Duygusal, Eğlenceli, Sakin
 VOKAL SEÇENEKLERİ: Kadın, Erkek, Fark etmez
 
-JSON CEVAP:
+KRİTİK: Mevcut bilgileri ASLA değiştirme, sadece EKSİK olanları ekle!
+
+CONCRETE ÖRNEKLER:
+
+Örnek 1:
+Mevcut: type=YOK, style=YOK, vocal=YOK
+Kullanıcı: "Arabesk Rock türü olsun anadolu ateşi gibi"
+✅ DOĞRU CEVAP:
+{
+  "type": "Arabesk",
+  "style": null,
+  "vocal": null,
+  "artistStyleDescription": "energetic Anatolian rock with arabesque-rock fusion",
+  "response": "Harika! Arabesk-Rock tarzı seçildi 🎸 Şimdi tarz olarak Romantik, Duygusal, Eğlenceli veya Sakin hangisi olsun?"
+}
+
+Örnek 2:
+Mevcut: type="Arabesk", style=YOK, vocal=YOK, artistStyleDescription="energetic..."
+Kullanıcı: "Fark etmez"
+✅ DOĞRU CEVAP:
+{
+  "type": "Arabesk",
+  "style": null,
+  "vocal": "Fark etmez",
+  "artistStyleDescription": "energetic Anatolian rock with arabesque-rock fusion",
+  "response": "Süper! Şimdi sadece tarz seçimi kaldı. Romantik, Duygusal, Eğlenceli veya Sakin? 🎵"
+}
+
+Örnek 3:
+Mevcut: type="Arabesk", style=YOK, vocal="Fark etmez", artistStyleDescription="..."
+Kullanıcı: "Çoşturan bir müzik olsun"
+✅ DOĞRU CEVAP:
+{
+  "type": "Arabesk",
+  "style": "Eğlenceli",
+  "vocal": "Fark etmez",
+  "artistStyleDescription": "energetic Anatolian rock with arabesque-rock fusion",
+  "response": "Mükemmel! Arabesk-Rock tarzında Eğlenceli bir şarkı hazırlıyoruz! 🎵"
+}
+
+JSON CEVAP FORMATI:
 {
   "type": "çıkarılan tür veya mevcut tür veya null",
   "style": "çıkarılan tarz veya mevcut tarz veya null",
@@ -612,18 +654,30 @@ CEVAP KURALLARI:
 - Emoji kullan ama fazla abartma (1-2 tane yeterli)`;
 
     try {
+      console.log('🔍 parseSongSettings INPUT:', {
+        userMessage,
+        existing
+      });
+
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
+      console.log('🤖 OpenAI raw response:', result);
+
       const parsed = this.cleanAndParseJSON(result);
+      console.log('📊 Parsed JSON:', parsed);
 
       // Merge with existing data (preserve what was already collected)
-      return {
+      const merged = {
         type: parsed.type || existing.type || null,
         style: parsed.style || existing.style || null,
         vocal: parsed.vocal || existing.vocal || null,
         artistStyleDescription: parsed.artistStyleDescription || existing.artistStyleDescription,
         response: parsed.response,
       };
+
+      console.log('✅ parseSongSettings OUTPUT:', merged);
+      return merged;
     } catch (error) {
+      console.error('❌ parseSongSettings ERROR:', error);
       // Fallback: preserve existing data
       return {
         type: existing.type || null,
