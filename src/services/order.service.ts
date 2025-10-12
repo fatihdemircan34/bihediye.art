@@ -883,7 +883,9 @@ Sipariş numaranız: ${orderId}`
         ? cleanText(order.orderData.recipientName)
         : 'Musteri';
 
-      const userEmail = `${recipientName.toLowerCase().replace(/\s/g, '')}@bihediye.art`;
+      // Use phone number for email to ensure it's always valid
+      const phoneClean = order.whatsappPhone.replace(/[^0-9]/g, ''); // Remove non-numeric chars
+      const userEmail = `${phoneClean}@bihediye.art`;
 
       // Clean song type for basket
       const songTypeClean = cleanText(order.orderData.song1.type);
@@ -1000,16 +1002,27 @@ Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`
         timestamp: new Date().toISOString(),
       });
 
-      // Send confirmation
-      await this.whatsappService.sendOrderConfirmation(
-        order.whatsappPhone,
-        orderId,
-        order.totalPrice,
-        order.estimatedDelivery|| new Date(),
-      );
+      // Check if this is a WhatsApp order or web order (web orders use email as phone)
+      const isWebOrder = order.whatsappPhone.includes('@');
 
-      // NEW: Generate lyrics first and show to user for review
-      await this.generateAndShowLyrics(orderId);
+      if (!isWebOrder) {
+        // Only send WhatsApp confirmation for WhatsApp orders
+        await this.whatsappService.sendOrderConfirmation(
+          order.whatsappPhone,
+          orderId,
+          order.totalPrice,
+          order.estimatedDelivery|| new Date(),
+        );
+      }
+
+      // For web orders, skip lyrics review and start processing directly
+      if (isWebOrder) {
+        console.log(`📱 Web order detected - skipping WhatsApp notifications for ${orderId}`);
+        await this.processOrder(orderId);
+      } else {
+        // NEW: Generate lyrics first and show to user for review (WhatsApp only)
+        await this.generateAndShowLyrics(orderId);
+      }
 
       console.log(`✅ Payment processed for order ${orderId}`);
     } catch (error: any) {
@@ -1310,11 +1323,18 @@ Ne yapmak istersiniz?
     const order = await this.firebaseService.getOrder(orderId);
     if (!order) return;
 
+    // Check if this is a web order
+    const isWebOrder = order.whatsappPhone.includes('@');
+
     try {
       // Generate lyrics
       order.status = 'lyrics_generating';
       await this.firebaseService.updateOrder(orderId, { status: 'lyrics_generating' });
-      await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Şarkı sözleri yazılıyor...', 10);
+
+      // Only send WhatsApp updates for WhatsApp orders
+      if (!isWebOrder) {
+        await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Şarkı sözleri yazılıyor...', 10);
+      }
 
       // Log analytics: lyrics generation started
       await this.firebaseService.logAnalytics('lyrics_generation_started', {
@@ -1602,5 +1622,121 @@ Destek: support@bihediye.art`
    */
   async getStats(): Promise<any> {
     return await this.firebaseService.getStats();
+  }
+
+  /**
+   * Create order from web (no WhatsApp conversation)
+   * For mobile/web app users
+   */
+  async createWebOrder(orderRequest: OrderRequest, userId: string, userEmail: string): Promise<{
+    orderId: string;
+    paymentUrl: string;
+    totalPrice: number;
+    discountApplied: number;
+    finalPrice: number;
+  }> {
+    try {
+      const orderId = uuidv4().replace(/-/g, '');
+
+      // Calculate pricing
+      const pricing = this.calculatePriceDetails(orderRequest.deliveryOptions);
+
+      // Create order
+      const order: Order = {
+        id: orderId,
+        whatsappPhone: orderRequest.phone || userEmail,
+        orderData: orderRequest,
+        status: 'payment_pending',
+        basePrice: pricing.basePrice,
+        additionalCosts: pricing.additionalCosts,
+        totalPrice: pricing.totalPrice,
+        createdAt: new Date(),
+        estimatedDelivery: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      };
+
+      // Save order
+      await this.firebaseService.saveOrder(order);
+
+      // Log analytics
+      await this.firebaseService.logAnalytics('order_created_web', {
+        orderId,
+        userId,
+        userEmail,
+        totalPrice: order.totalPrice,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Generate payment link
+      if (!this.paytrService) {
+        throw new Error('Payment system not configured');
+      }
+
+      const baseUrl = process.env.BASE_URL || 'https://bihediye.art';
+
+      const cleanText = (text: string): string => {
+        return text
+          .replace(/ğ/g, 'g')
+          .replace(/Ğ/g, 'G')
+          .replace(/ü/g, 'u')
+          .replace(/Ü/g, 'U')
+          .replace(/ş/g, 's')
+          .replace(/Ş/g, 'S')
+          .replace(/ı/g, 'i')
+          .replace(/İ/g, 'I')
+          .replace(/ö/g, 'o')
+          .replace(/Ö/g, 'O')
+          .replace(/ç/g, 'c')
+          .replace(/Ç/g, 'C')
+          .replace(/[^a-zA-Z0-9\s]/g, '');
+      };
+
+      const recipientName = order.orderData.recipientName
+        ? cleanText(order.orderData.recipientName)
+        : 'Musteri';
+
+      const songTypeClean = cleanText(order.orderData.song1.type);
+
+      const tokenResponse = await this.paytrService.createPaymentToken(
+        {
+          orderId: order.id,
+          email: userEmail,
+          amount: order.totalPrice,
+          userIp: '85.34.0.1',
+          userName: recipientName,
+          userPhone: order.whatsappPhone,
+          basketItems: [
+            {
+              name: `${songTypeClean} Sarki Hediyesi`,
+              price: order.totalPrice,
+              quantity: 1,
+            },
+          ],
+        },
+        `${baseUrl}/payment/success?orderId=${order.id}`,
+        `${baseUrl}/payment/fail?orderId=${order.id}`
+      );
+
+      if (tokenResponse.status !== 'success' || !tokenResponse.token) {
+        throw new Error(`Payment token creation failed: ${tokenResponse.reason || 'Unknown'}`);
+      }
+
+      // Store payment token
+      await this.firebaseService.updateOrder(orderId, {
+        paymentToken: tokenResponse.token,
+      });
+
+      const paymentUrl = `${baseUrl}/payment/${order.id}`;
+
+      return {
+        orderId,
+        paymentUrl,
+        totalPrice: order.totalPrice,
+        discountApplied: 0,
+        finalPrice: order.totalPrice,
+      };
+    } catch (error: any) {
+      console.error('Error creating web order:', error);
+      throw error;
+    }
   }
 }
