@@ -166,20 +166,24 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
           conversation.data.song1 // Pass existing data if any
         );
 
-        // Check if all required fields are present
-        if (!settingsResult.type || !settingsResult.style || !settingsResult.vocal) {
-          // Missing info - ask again
+        // PROGRESSIVE: Update conversation with collected data (even if partial)
+        conversation.data.song1 = {
+          type: settingsResult.type || conversation.data.song1?.type,
+          style: settingsResult.style || conversation.data.song1?.style,
+          vocal: settingsResult.vocal || conversation.data.song1?.vocal,
+          artistStyleDescription: settingsResult.artistStyleDescription || conversation.data.song1?.artistStyleDescription,
+        } as any;
+
+        console.log('💾 Updated conversation.data.song1:', conversation.data.song1);
+
+        // Check if ALL required fields are NOW present
+        if (!conversation.data.song1.type || !conversation.data.song1.style || !conversation.data.song1.vocal) {
+          // Still missing info - send AI's response asking for missing fields
           await this.whatsappService.sendTextMessage(from, settingsResult.response);
-          return; // Stay on same step
+          return; // Stay on same step, but conversation is saved with partial data
         }
 
         // All settings collected!
-        conversation.data.song1 = {
-          type: settingsResult.type,
-          style: settingsResult.style,
-          vocal: settingsResult.vocal,
-          artistStyleDescription: settingsResult.artistStyleDescription,
-        } as any;
 
         // Log analytics
         await this.firebaseService.logAnalytics('song_settings_completed', {
