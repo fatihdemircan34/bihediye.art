@@ -279,27 +279,52 @@ Kadın sesi, Erkek sesi veya Fark etmez diyebilirsiniz!`,
 
   /**
    * Parse recipient relation
+   * FLEXIBLE: Accepts personal relations AND business/company names
    */
   async parseRecipientRelation(userMessage: string): Promise<{ relation: string | null; response: string }> {
-    const prompt = `Kullanıcı hediye edeceği kişinin kim olduğunu söylüyor. Mesajı: "${userMessage}"
+    const prompt = `Kullanıcı hediye/şarkı için kimin olduğunu söylüyor. Mesajı: "${userMessage}"
 
-Örnekler: Annem, Babam, Sevgilim, Eşim, Arkadaşım, Kardeşim, vb.
+ÇOK ÖNEMLİ: SADECE KİŞİSEL İLİŞKİ DEĞİL, HERHANGİ BİR HEDEF OLABİLİR!
 
-Görevin:
-1. Kullanıcının mesajından ilişkiyi (kim olduğunu) çıkar
-2. Samimi ve sıcak bir onay mesajı yaz
-3. Eğer anlaşılmıyorsa null döndür
+KABUL EDİLEN CEVAPLAR:
+✅ Kişiler: Annem, Babam, Sevgilim, Eşim, Arkadaşım, Kardeşim
+✅ İşletmeler: İşletmem, Firmam, Şirketim, Markam, Restoranım, Cafem
+✅ Organizasyonlar: Kulübüm, Takımım, Topluluğum, Derneğim
+✅ Projeler: Projem, Ürünüm, Hizmetim, Websitem
+
+ÖRNEKLER:
+Kullanıcı: "işletmem için"
+✅ {
+  "relation": "İşletmem",
+  "response": "Harika! İşletmeniz için özel bir şarkı hazırlayacağız 🎵"
+}
+
+Kullanıcı: "bi hediye"
+✅ {
+  "relation": "Bi Hediye",
+  "response": "Bi Hediye için özel bir şarkı mı? Süper! 🎶"
+}
+
+Kullanıcı: "annem"
+✅ {
+  "relation": "Annem",
+  "response": "Ne güzel! Anneniz için çok özel bir şarkı hazırlayacağız 💝"
+}
+
+GÖREV:
+1. Kullanıcının mesajından KİM/NE olduğunu çıkar (kişi, işletme, proje - hepsi olabilir!)
+2. ESNEKLİK GÖSTER - her türlü cevabı kabul et
+3. Samimi ve sıcak bir onay mesajı yaz
+4. Sadece tamamen anlamsızsa null döndür
 
 JSON formatında cevap ver:
 {
-  "relation": "çıkarılan ilişki (örn: Sevgilim, Annem)" veya null,
+  "relation": "çıkarılan ilişki/hedef" veya null,
   "response": "Samimi onay mesajı"
 }
 
-Eğer relation null ise, response'da:
-"Bu şarkıyı hediye edeceğiniz kişi sizin neyiniz? 😊
-
-Örneğin: Annem, Sevgilim, En yakın arkadaşım gibi..."`;
+KRİTİK: Kullanıcı "işletmem", "firmam", "markam" yazarsa - KABUL ET!
+ASLA "Annem, Sevgilim gibi..." diye sınırlama! Çok esnek ol!`;
 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.5 });
@@ -307,9 +332,9 @@ Eğer relation null ise, response'da:
     } catch (error) {
       return {
         relation: null,
-        response: `Bu şarkıyı hediye edeceğiniz kişi sizin neyiniz? 😊
+        response: `Bu şarkı kimin için? 😊
 
-Örneğin: Annem, Sevgilim, En yakın arkadaşım gibi...`,
+Kişi (Annem, Sevgilim...), İşletme (Firmam, Markam...) veya başka bir hedef olabilir!`,
       };
     }
   }
@@ -570,20 +595,44 @@ GÖREV:
 Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
 DOLU olanları KORU (değiştirme!).
 
-ÖNEMLİ KURALLAR - DİKKATLE OKU:
-1. "arabesk rock" → type: "Arabesk", artistStyleDescription: "arabesque-rock fusion"
-2. "eğlenceli", "çoşturan", "enerjik", "coşkan" → style: "Eğlenceli"
-3. "fark etmez", "farketmez", "önemli değil" → vocal: "Fark etmez"
-4. "anadolu ateşi gibi" → artistStyleDescription: "energetic Anatolian rock"
-5. "romantik", "aşk", "sevgi" → style: "Romantik"
-6. "duygusal", "hüzünlü", "ağlatan" → style: "Duygusal"
-7. "sakin", "yavaş", "rahat" → style: "Sakin"
+=========================================
+ÇOK ÖNEMLİ: ESNEKLİK!
+=========================================
 
-TÜR SEÇENEKLERİ: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
-TARZ SEÇENEKLERİ: Romantik, Duygusal, Eğlenceli, Sakin
-VOKAL SEÇENEKLERİ: Kadın, Erkek, Fark etmez
+TÜR: HERHANGİ BİR MÜZİK TÜRÜ KABULEDİLİR!
+✅ Önerilen: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
+✅ Ama bunlarla sınırlı değil! Kullanıcı başka tür yazarsa KABUL ET:
+  - "Reggae" → type: "Reggae"
+  - "Türkü" → type: "Türkü"
+  - "EDM" → type: "EDM"
+  - "Blues" → type: "Blues"
+  - "Folk" → type: "Folk"
 
-KRİTİK: Mevcut bilgileri ASLA değiştirme, sadece EKSİK olanları ekle!
+TARZ: HERHANGİ BİR TARZ/MOOD KABULEDİLİR!
+✅ Önerilen: Romantik, Duygusal, Eğlenceli, Sakin
+✅ Ama bunlarla sınırlı değil! Kullanıcı başka tarz yazarsa KABUL ET:
+  - "çoşturan", "enerjik", "coşkan" → style: "Eğlenceli"
+  - "hüzünlü", "ağlatan" → style: "Duygusal"
+  - "aşk", "sevgi" → style: "Romantik"
+  - "yavaş", "rahat" → style: "Sakin"
+  - "hareketli" → style: "Hareketli"
+  - "neşeli" → style: "Neşeli"
+
+VOKAL:
+✅ Kadın, Erkek, Fark etmez
+✅ "farketmez", "önemli değil", "상관없어" → "Fark etmez"
+
+TÜRK MÜZİK TERİMLERİ:
+- "arabesk rock", "pop arabesk" → type: ilk tür, artistStyleDescription: fusion açıklaması
+- "anadolu rock" → type: "Rock", artistStyleDescription: "Anatolian rock"
+- "türkü", "halk müziği" → type: "Türkü" veya "Nostaljik"
+
+KRİTİK KURAL:
+- Kullanıcı BİLİNMEYEN bir müzik türü/tarzı yazarsa → REDDETME, KABUL ET!
+- Eğer müzik ile ilgili bir terim görürsen → tür veya tarz olarak al
+- Sadece tamamen anlamsızsa (örn: "asdasd", "123") → null döndür
+
+Mevcut bilgileri ASLA değiştirme, sadece EKSİK olanları ekle!
 
 CONCRETE ÖRNEKLER:
 
@@ -649,6 +698,10 @@ CEVAP KURALLARI:
   - "Lütfen vocal ve style belirtin" ❌ ROBOT GİBİ
   - "Eksik: Vokal" ❌ KISA VE KURU
 
+- Eğer kullanıcı TAMAMEN ANLAMSIZ bir şey yazdıysa (örn: "asdasd"):
+  ✅ DOĞRU: "Üzgünüm, anlamadım 😊 Hangi müzik türünü istersiniz? (Pop, Rock, Arabesk gibi)"
+  ✅ DOĞRU: "Böyle bir müzik tarzı bulamadım. Başka bir tür deneyelim mi? 🎵"
+
 - ASLA dolu bilgiyi tekrar sorma!
 - ASLA teknik terimler kullanma (vocal, style, type yerine: ses, tarz, tür)
 - Emoji kullan ama fazla abartma (1-2 tane yeterli)`;
@@ -694,7 +747,7 @@ ${!existing.type ? '🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nos
 
   /**
    * Parse combined recipient info (relation + name + include name)
-   * Example: "Annem, Evet, Ayşe" or "Sevgilim Mehmet"
+   * FLEXIBLE: Accepts personal relations, businesses, and projects
    */
   async parseRecipientInfo(userMessage: string): Promise<{
     relation: string | null;
@@ -702,23 +755,52 @@ ${!existing.type ? '🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nos
     includeNameInSong: boolean | null;
     response: string;
   }> {
-    const prompt = `Kullanıcı hediye bilgilerini veriyor: "${userMessage}"
+    const prompt = `Kullanıcı hediye/şarkı bilgilerini veriyor: "${userMessage}"
+
+ÇOK ÖNEMLİ: ESNEKLİK!
+Bu SADECE kişisel hediye değil, işletme/proje için de olabilir!
 
 3 bilgi almalıyız:
-1. İlişki: Annem, Sevgilim, Arkadaşım, vb.
-2. İsim geçsin mi: Evet/Hayır
-3. İsim (eğer geçecekse): Ayşe, Mehmet, vb.
+1. İlişki/Hedef: Kişi (Annem, Sevgilim), İşletme (İşletmem, Markam), Proje (Projem)
+2. İsim geçsin mi: Evet/Hayır (işletme için genelde Evet)
+3. İsim: Ayşe, Mehmet, "Bi Hediye", "Cafe XYZ", vb.
 
-JSON cevap ver:
+ÖRNEKLER:
+
+Kullanıcı: "işletmem"
+✅ {
+  "relation": "İşletmem",
+  "name": null,
+  "includeNameInSong": null,
+  "response": "İşletmeniz için şarkı hazırlayacağız! İşletme adını şarkıda geçirmek ister misiniz? (Evet/Hayır)"
+}
+
+Kullanıcı: "bi hediye"
+✅ {
+  "relation": "Bi Hediye",
+  "name": "Bi Hediye",
+  "includeNameInSong": true,
+  "response": "Harika! Bi Hediye için özel bir şarkı hazırlıyoruz 🎵"
+}
+
+Kullanıcı: "annem, evet, ayşe"
+✅ {
+  "relation": "Annem",
+  "name": "Ayşe",
+  "includeNameInSong": true,
+  "response": "Mükemmel! Anneniz Ayşe için özel bir şarkı hazırlayacağız 💝"
+}
+
+JSON CEVAP:
 {
-  "relation": "ilişki" veya null,
-  "name": "isim" veya null (sadece geçecekse),
+  "relation": "ilişki/hedef" veya null,
+  "name": "isim" veya null,
   "includeNameInSong": true/false/null,
   "response": "Kullanıcıya mesaj"
 }
 
-Eksik varsa response'da sor.
-Eğer kullanıcı sadece ilişki yazdıysa, isim sorulsun.`;
+KRİTİK: İşletme/Marka adı varsa (örn: "Bi Hediye"), name'e yaz!
+Eksik varsa response'da sor, ama ESNEKLİK GÖSTER!`;
 
     try {
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
@@ -728,13 +810,12 @@ Eğer kullanıcı sadece ilişki yazdıysa, isim sorulsun.`;
         relation: null,
         name: null,
         includeNameInSong: null,
-        response: `Hediye bilgileri:
+        response: `Bu şarkı kimin/neyin için? 😊
 
-💝 Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
-📝 Şarkıda ismini geçirmek ister misiniz? (Evet/Hayır)
-✏️ İsmi nedir? (Geçecekse)
+Kişi (Annem, Sevgilim...), İşletme (Firmam, Markam...), veya Proje olabilir.
 
-Örnek: "Annem, Evet, Ayşe"`,
+Şarkıda isim geçsin mi? (Evet/Hayır)
+İsim nedir?`,
       };
     }
   }
