@@ -592,8 +592,8 @@ JSON CEVAP:
 
 CEVAP KURALLARI:
 - Eğer HERŞEYİ topladıysan:
-  "Harika! ${type} tarzında ${style} bir şarkı hazırlıyoruz! 🎵"
-  (örnek: "Harika! Arabesk tarzında Eğlenceli bir şarkı hazırlıyoruz! 🎵")
+  Kullanıcının seçtiği tür ve tarzı kullanarak samimi bir mesaj yaz.
+  Örnek: "Harika! Arabesk tarzında Eğlenceli bir şarkı hazırlıyoruz! 🎵"
 
 - Eğer hala eksik varsa, SAMİMİ ve DOĞAL bir şekilde sor:
 
