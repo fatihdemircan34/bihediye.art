@@ -210,29 +210,40 @@ Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
         break;
 
       case 'recipient_info':
-        const recipientResult = await this.aiConversationService.parseRecipientInfo(message);
+        // PROGRESSIVE: Pass existing recipient data to avoid re-asking
+        const existingRecipient = {
+          relation: conversation.data.recipientRelation,
+          includeNameInSong: conversation.data.includeNameInSong,
+          name: conversation.data.recipientName,
+        };
 
-        // Check if all required fields are present
-        if (!recipientResult.relation || recipientResult.includeNameInSong === null) {
+        const recipientResult = await this.aiConversationService.parseRecipientInfo(
+          message,
+          existingRecipient
+        );
+
+        // PROGRESSIVE: Update conversation with collected data (even if partial)
+        conversation.data.recipientRelation = recipientResult.relation || conversation.data.recipientRelation;
+        conversation.data.includeNameInSong = recipientResult.includeNameInSong ?? conversation.data.includeNameInSong;
+        conversation.data.recipientName = recipientResult.name || conversation.data.recipientName;
+
+        console.log('💾 Updated conversation recipient data:', {
+          relation: conversation.data.recipientRelation,
+          includeNameInSong: conversation.data.includeNameInSong,
+          name: conversation.data.recipientName,
+        });
+
+        // Check if ALL required fields are NOW present
+        if (!conversation.data.recipientRelation || conversation.data.includeNameInSong === null || conversation.data.includeNameInSong === undefined) {
           await this.whatsappService.sendTextMessage(from, recipientResult.response);
-          return;
+          return; // Stay on same step, but conversation is saved with partial data
         }
 
         // If name should be included but not provided, ask again
-        if (recipientResult.includeNameInSong && !recipientResult.name) {
-          await this.whatsappService.sendTextMessage(
-            from,
-            `İsim geçmesini istiyorsunuz ama ismi yazmadınız 😊
-
-Lütfen tekrar yazın. Örnek: "Annem, Evet, Fatma"`
-          );
+        if (conversation.data.includeNameInSong && !conversation.data.recipientName) {
+          await this.whatsappService.sendTextMessage(from, recipientResult.response);
           return;
         }
-
-        // Save recipient info
-        conversation.data.recipientRelation = recipientResult.relation;
-        conversation.data.includeNameInSong = recipientResult.includeNameInSong;
-        conversation.data.recipientName = recipientResult.name || undefined;
 
         // Log analytics
         await this.firebaseService.logAnalytics('recipient_info_completed', {

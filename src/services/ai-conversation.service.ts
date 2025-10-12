@@ -748,14 +748,25 @@ ${!existing.type ? '🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nos
   /**
    * Parse combined recipient info (relation + name + include name)
    * FLEXIBLE: Accepts personal relations, businesses, and projects
+   * PROGRESSIVE: Remembers previously collected data
    */
-  async parseRecipientInfo(userMessage: string): Promise<{
+  async parseRecipientInfo(
+    userMessage: string,
+    existingData?: { relation?: string; includeNameInSong?: boolean | null; name?: string }
+  ): Promise<{
     relation: string | null;
     name: string | null;
     includeNameInSong: boolean | null;
     response: string;
   }> {
+    const existing = existingData || {};
+
     const prompt = `Kullanıcı hediye/şarkı bilgilerini veriyor: "${userMessage}"
+
+MEVCUT BİLGİLER (daha önce alındı):
+- İlişki/Hedef: ${existing.relation || 'YOK'}
+- İsim geçsin mi: ${existing.includeNameInSong === true ? 'Evet' : existing.includeNameInSong === false ? 'Hayır' : 'YOK'}
+- İsim: ${existing.name || 'YOK'}
 
 ÇOK ÖNEMLİ: ESNEKLİK!
 Bu SADECE kişisel hediye değil, işletme/proje için de olabilir!
@@ -765,57 +776,94 @@ Bu SADECE kişisel hediye değil, işletme/proje için de olabilir!
 2. İsim geçsin mi: Evet/Hayır (işletme için genelde Evet)
 3. İsim: Ayşe, Mehmet, "Bi Hediye", "Cafe XYZ", vb.
 
-ÖRNEKLER:
+GÖREV:
+Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
+DOLU olanları KORU (değiştirme!).
 
-Kullanıcı: "işletmem"
-✅ {
+ÖRNEKLER (PROGRESSIVE):
+
+Örnek 1:
+Mevcut: relation=YOK, includeNameInSong=YOK, name=YOK
+Kullanıcı: "İşletmem için bir muzik yapamak istiyorum isimi is Bi Hediye"
+✅ DOĞRU CEVAP:
+{
   "relation": "İşletmem",
-  "name": null,
+  "name": "Bi Hediye",
   "includeNameInSong": null,
-  "response": "İşletmeniz için şarkı hazırlayacağız! İşletme adını şarkıda geçirmek ister misiniz? (Evet/Hayır)"
+  "response": "Harika! İşletmeniz 'Bi Hediye' için şarkı hazırlayacağız! İşletme adını şarkıda geçirmek ister misiniz? (Evet/Hayır)"
 }
 
-Kullanıcı: "bi hediye"
-✅ {
-  "relation": "Bi Hediye",
+Örnek 2:
+Mevcut: relation="İşletmem", includeNameInSong=YOK, name="Bi Hediye"
+Kullanıcı: "evet"
+✅ DOĞRU CEVAP:
+{
+  "relation": "İşletmem",
   "name": "Bi Hediye",
   "includeNameInSong": true,
-  "response": "Harika! Bi Hediye için özel bir şarkı hazırlıyoruz 🎵"
+  "response": "Süper! İşletmeniz için 'Bi Hediye' ismi şarkıda geçecek 🎵"
 }
 
-Kullanıcı: "annem, evet, ayşe"
-✅ {
-  "relation": "Annem",
-  "name": "Ayşe",
+Örnek 3:
+Mevcut: relation=YOK, includeNameInSong=YOK, name=YOK
+Kullanıcı: "evet işletmem için bir sarki yapamk istiyorum isim geçsin firmam ise bi hediye"
+✅ DOĞRU CEVAP:
+{
+  "relation": "İşletmem",
+  "name": "Bi Hediye",
   "includeNameInSong": true,
-  "response": "Mükemmel! Anneniz Ayşe için özel bir şarkı hazırlayacağız 💝"
+  "response": "Mükemmel! İşletmeniz 'Bi Hediye' için şarkı hazırlıyoruz ve ismi şarkıda geçecek! 🎶"
 }
 
 JSON CEVAP:
 {
-  "relation": "ilişki/hedef" veya null,
-  "name": "isim" veya null,
-  "includeNameInSong": true/false/null,
+  "relation": "çıkarılan ilişki/hedef veya mevcut veya null",
+  "name": "çıkarılan isim veya mevcut veya null",
+  "includeNameInSong": true/false veya mevcut veya null,
   "response": "Kullanıcıya mesaj"
 }
 
-KRİTİK: İşletme/Marka adı varsa (örn: "Bi Hediye"), name'e yaz!
-Eksik varsa response'da sor, ama ESNEKLİK GÖSTER!`;
+KRİTİK KURALLAR:
+- Mevcut bilgileri ASLA değiştirme, sadece EKSİK olanları ekle!
+- İşletme/Marka adı varsa (örn: "Bi Hediye"), name'e yaz!
+- "evet", "isim geçsin" → includeNameInSong: true
+- "hayır", "gerek yok" → includeNameInSong: false
+- Eksik varsa response'da SAMİMİ bir şekilde sor, ama ESNEKLİK GÖSTER!`;
 
     try {
+      console.log('🔍 parseRecipientInfo INPUT:', {
+        userMessage,
+        existing
+      });
+
       const result = await this.openaiService.generateText(prompt, { temperature: 0.3 });
-      return this.cleanAndParseJSON(result);
+      console.log('🤖 OpenAI raw response:', result);
+
+      const parsed = this.cleanAndParseJSON(result);
+      console.log('📊 Parsed JSON:', parsed);
+
+      // Merge with existing data (preserve what was already collected)
+      const merged = {
+        relation: parsed.relation || existing.relation || null,
+        name: parsed.name || existing.name || null,
+        includeNameInSong: parsed.includeNameInSong ?? existing.includeNameInSong ?? null,
+        response: parsed.response,
+      };
+
+      console.log('✅ parseRecipientInfo OUTPUT:', merged);
+      return merged;
     } catch (error) {
+      console.error('❌ parseRecipientInfo ERROR:', error);
+      // Fallback: preserve existing data
       return {
-        relation: null,
-        name: null,
-        includeNameInSong: null,
+        relation: existing.relation || null,
+        name: existing.name || null,
+        includeNameInSong: existing.includeNameInSong ?? null,
         response: `Bu şarkı kimin/neyin için? 😊
 
 Kişi (Annem, Sevgilim...), İşletme (Firmam, Markam...), veya Proje olabilir.
 
-Şarkıda isim geçsin mi? (Evet/Hayır)
-İsim nedir?`,
+${!existing.includeNameInSong && existing.includeNameInSong !== false ? 'Şarkıda isim geçsin mi? (Evet/Hayır)\n' : ''}${existing.includeNameInSong === true && !existing.name ? 'İsim nedir?\n' : ''}`,
       };
     }
   }
