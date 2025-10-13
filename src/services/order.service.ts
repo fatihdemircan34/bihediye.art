@@ -173,7 +173,10 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
 🎭 Tarz: Romantik, Duygusal, Eğlenceli, Sakin
 🎤 Vokal: Kadın, Erkek, Fark etmez
 
-Örnek: "Pop, Romantik, Kadın" veya "Arabesk duygusal"`
+Örnek: "Pop, Romantik, Kadın" veya "Arabesk duygusal"
+
+---
+💡 İptal etmek için *"iptal"* yazın.`
         );
         conversation.step = 'song_settings';
         break;
@@ -246,7 +249,10 @@ Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
 Şarkıda ismini geçirmek ister misiniz? (Evet/Hayır)
 İsmi nedir? (Geçecekse)
 
-Örnek: "Annem, Evet, Fatma"`
+Örnek: "Annem, Evet, Fatma"
+
+---
+💡 İptal etmek için *"iptal"* yazın.`
         );
         conversation.step = 'recipient_info';
         break;
@@ -343,7 +349,10 @@ Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
 Örnek:
 "10 yıldır evliyiz, her zorluğu birlikte atlattık...
 
-Not: Slow tempo olsun"`
+Not: Slow tempo olsun"
+
+---
+💡 İptal etmek için *"iptal"* yazın.`
         );
         conversation.step = 'story_and_notes';
         break;
@@ -554,7 +563,10 @@ ${revisionResult.lyrics}
 
 Ne yapmak istersiniz?
 1️⃣ Onayla (Müzik üretimine geç)
-2️⃣ ${remainingRevisions > 0 ? 'Tekrar Revize Et' : 'Revizyon hakkınız bitti'}`
+2️⃣ ${remainingRevisions > 0 ? 'Tekrar Revize Et' : 'Revizyon hakkınız bitti'}
+
+---
+💡 İptal etmek için *"iptal"* yazın.`
               );
             }
           }
@@ -679,7 +691,10 @@ ${pricingText}
 ⏰ 2 saat teslimat${discountPrompt}
 
 1️⃣ Onayla
-2️⃣ İptal`;
+2️⃣ İptal
+
+---
+💡 İptal etmek için *"iptal"* yazın.`;
 
     await this.whatsappService.sendTextMessage(conversation.phone, summary);
     conversation.step = 'confirm';
@@ -1078,7 +1093,10 @@ ${lyricsResult.lyrics}
 
 Ne yapmak istersiniz?
 1️⃣ Onayla (Müzik üretimine geç)
-2️⃣ Revizyon İstiyorum (Değiştirmek istediğiniz kısmı yazın)`
+2️⃣ Revizyon İstiyorum (Değiştirmek istediğiniz kısmı yazın)
+
+---
+💡 İptal etmek için *"iptal"* yazın.`
       );
 
       console.log(`📝 Lyrics generated and sent to user for review: ${orderId}`);
