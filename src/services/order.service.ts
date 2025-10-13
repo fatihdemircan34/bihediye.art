@@ -31,6 +31,8 @@ export interface ConversationState {
   tempLyrics?: string;
   lyricsRevisionCount?: number;
   retryCount?: number;  // Track failed parse attempts per step
+  lastMessage?: string; // Track last user message to detect duplicates
+  duplicateCount?: number; // Count duplicate messages
 }
 
 export class OrderService {
@@ -139,6 +141,22 @@ export class OrderService {
    */
   private async processConversationStep(conversation: ConversationState, message: string): Promise<boolean | void> {
     const from = conversation.phone;
+
+    // Detect duplicate messages
+    if (conversation.lastMessage === message) {
+      conversation.duplicateCount = (conversation.duplicateCount || 0) + 1;
+
+      // After 2 duplicate messages, treat as retry failure
+      if (conversation.duplicateCount >= 2) {
+        console.log(`⚠️ Duplicate message detected ${conversation.duplicateCount} times: "${message}"`);
+        conversation.retryCount = (conversation.retryCount || 0) + 2; // Force fallback
+        conversation.duplicateCount = 0; // Reset
+      }
+    } else {
+      // New message, reset duplicate counter
+      conversation.lastMessage = message;
+      conversation.duplicateCount = 0;
+    }
 
     switch (conversation.step) {
       case 'welcome':
