@@ -904,6 +904,28 @@ Kullanıcı: "Ayşe"
   "response": "Mükemmel! Sevgiliniz Ayşe için şarkı hazırlıyoruz! 💝"
 }
 
+Örnek 8: "EVET + İSİM" - includeNameInSong eksik
+Mevcut: relation="Kızım", includeNameInSong=YOK, name=YOK
+Kullanıcı: "Evet Masal"
+✅ DOĞRU CEVAP:
+{
+  "relation": "Kızım",
+  "name": "Masal",
+  "includeNameInSong": true,
+  "response": "Mükemmel! Kızınız Masal için şarkı hazırlıyoruz ve ismi şarkıda geçecek! 💝"
+}
+
+Örnek 9: "EVET, İSİM" - virgüllü format
+Mevcut: relation="Annem", includeNameInSong=YOK, name=YOK
+Kullanıcı: "Evet, Ayşe"
+✅ DOĞRU CEVAP:
+{
+  "relation": "Annem",
+  "name": "Ayşe",
+  "includeNameInSong": true,
+  "response": "Harika! Anneniz Ayşe için şarkı hazırlıyoruz ve ismi şarkıda geçecek! 💝"
+}
+
 JSON CEVAP:
 {
   "relation": "çıkarılan ilişki/hedef/tema veya mevcut veya null",
@@ -920,21 +942,27 @@ KRİTİK KURALLAR:
 - "evet", "geçsin", "olsun" → includeNameInSong: true
 - "hayır", "gerek yok", "istemiyorum" → includeNameInSong: false
 
-**ÖNEMLİ: TEK KELİME CEVAPLAR (SINGLE WORD ANSWERS):**
-Eğer kullanıcı tek kelime yazdıysa, CONTEXT'e bak:
+**ÖNEMLİ: TEK/ÇİFT KELİME CEVAPLAR (CONTEXT-AWARE PARSING):**
+Kullanıcının mesajını CONTEXT'e göre parse et:
 
-1. Eğer relation=YOK → Tek kelime = relation
+1. relation=YOK → Mesaj = relation
    - "Öykü" → relation: "Öykü"
    - "annem" → relation: "Annem"
+   - "Evet Masal" → relation: "Evet Masal" (iki kelime de relation!)
 
-2. Eğer relation=DOLU, includeNameInSong=YOK → Tek kelime = Yes/No kontrolü
-   - "Öykü" → includeNameInSong: true, name: "Öykü"
-   - "Evet" → includeNameInSong: true
-   - "Hayır" → includeNameInSong: false
+2. relation=DOLU, includeNameInSong=YOK → Yes/No + İsim kontrolü
+   - "Evet" → includeNameInSong: true, name: null
+   - "Hayır" → includeNameInSong: false, name: null
+   - "Evet Masal" → includeNameInSong: true, name: "Masal" (evet + isim!)
+   - "Evet, Öykü" → includeNameInSong: true, name: "Öykü"
+   - "Öykü" (tek kelime ama isim gibi) → includeNameInSong: true, name: "Öykü"
 
-3. Eğer relation=DOLU, includeNameInSong=true, name=YOK → Tek kelime = name
+3. relation=DOLU, includeNameInSong=true, name=YOK → Mesaj = name
    - "Öykü" → name: "Öykü"
    - "Ali" → name: "Ali"
+
+KRİTİK: "Evet X" formatı → includeNameInSong: true, name: "X"
+"Hayır X" formatı → YANLIŞ! "Hayır" = includeNameInSong: false, X'i yok say!
 
 CEVAP VERMEDE:
 - Eğer relation DOLU ve anlamlıysa, ASLA "hangi ilişki/hedef" SORMA!
