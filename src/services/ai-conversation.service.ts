@@ -871,6 +871,39 @@ Kullanıcı: "evet işletmem için bir sarki yapamk istiyorum isim geçsin firma
   "response": "Mükemmel! İşletmeniz 'Bi Hediye' için şarkı hazırlıyoruz ve ismi şarkıda geçecek! 🎶"
 }
 
+Örnek 5: TEK KELİME - relation eksik
+Mevcut: relation=YOK, includeNameInSong=YOK, name=YOK
+Kullanıcı: "Öykü"
+✅ DOĞRU CEVAP:
+{
+  "relation": "Öykü",
+  "name": null,
+  "includeNameInSong": null,
+  "response": "Harika! Öykü için bir şarkı hazırlayacağız! Şarkıda isim geçsin mi? (Evet/Hayır)"
+}
+
+Örnek 6: TEK KELİME - includeNameInSong eksik
+Mevcut: relation="Öykü", includeNameInSong=YOK, name=YOK
+Kullanıcı: "Evet"
+✅ DOĞRU CEVAP:
+{
+  "relation": "Öykü",
+  "name": null,
+  "includeNameInSong": true,
+  "response": "Süper! Öykü'nün ismi şarkıda geçecek! Son olarak, tam ismi nedir?"
+}
+
+Örnek 7: TEK KELİME - name eksik
+Mevcut: relation="Sevgilim", includeNameInSong=true, name=YOK
+Kullanıcı: "Ayşe"
+✅ DOĞRU CEVAP:
+{
+  "relation": "Sevgilim",
+  "name": "Ayşe",
+  "includeNameInSong": true,
+  "response": "Mükemmel! Sevgiliniz Ayşe için şarkı hazırlıyoruz! 💝"
+}
+
 JSON CEVAP:
 {
   "relation": "çıkarılan ilişki/hedef/tema veya mevcut veya null",
@@ -884,8 +917,24 @@ KRİTİK KURALLAR:
 - Kullanıcı NE DEMİŞSE kabul et! (şehir, kavram, proje, kişi, işletme - hepsi geçerli)
 - "bir sehir aski" → relation: "Bir Şehir Aşkı" (kabul et, SORMA!)
 - "istanbul" → Eğer daha önce "için şarkı" denmişse, relation VE name olarak kabul et
-- "evet", "geçsin" → includeNameInSong: true
-- "hayır", "gerek yok" → includeNameInSong: false
+- "evet", "geçsin", "olsun" → includeNameInSong: true
+- "hayır", "gerek yok", "istemiyorum" → includeNameInSong: false
+
+**ÖNEMLİ: TEK KELİME CEVAPLAR (SINGLE WORD ANSWERS):**
+Eğer kullanıcı tek kelime yazdıysa, CONTEXT'e bak:
+
+1. Eğer relation=YOK → Tek kelime = relation
+   - "Öykü" → relation: "Öykü"
+   - "annem" → relation: "Annem"
+
+2. Eğer relation=DOLU, includeNameInSong=YOK → Tek kelime = Yes/No kontrolü
+   - "Öykü" → includeNameInSong: true, name: "Öykü"
+   - "Evet" → includeNameInSong: true
+   - "Hayır" → includeNameInSong: false
+
+3. Eğer relation=DOLU, includeNameInSong=true, name=YOK → Tek kelime = name
+   - "Öykü" → name: "Öykü"
+   - "Ali" → name: "Ali"
 
 CEVAP VERMEDE:
 - Eğer relation DOLU ve anlamlıysa, ASLA "hangi ilişki/hedef" SORMA!

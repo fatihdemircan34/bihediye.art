@@ -30,6 +30,7 @@ export interface ConversationState {
   lastUpdated: Date;
   tempLyrics?: string;
   lyricsRevisionCount?: number;
+  retryCount?: number;  // Track failed parse attempts per step
 }
 
 export class OrderService {
@@ -178,9 +179,32 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
 
         // Check if ALL required fields are NOW present
         if (!conversation.data.song1.type || !conversation.data.song1.style || !conversation.data.song1.vocal) {
-          // Still missing info - send AI's response asking for missing fields
-          await this.whatsappService.sendTextMessage(from, settingsResult.response);
-          return; // Stay on same step, but conversation is saved with partial data
+          // Increment retry counter
+          conversation.retryCount = (conversation.retryCount || 0) + 1;
+
+          // After 2 failed attempts, use random defaults
+          if (conversation.retryCount >= 2) {
+            conversation.data.song1 = {
+              type: conversation.data.song1?.type || 'Pop',
+              style: conversation.data.song1?.style || 'Eğlenceli',
+              vocal: conversation.data.song1?.vocal || 'Fark etmez',
+              artistStyleDescription: conversation.data.song1?.artistStyleDescription,
+            } as any;
+            conversation.retryCount = 0; // Reset counter
+
+            await this.whatsappService.sendTextMessage(
+              from,
+              `Üzgünüm, tam anlamadım 😊 Devam edebilmek için ${conversation.data.song1.type}, ${conversation.data.song1.style}, ${conversation.data.song1.vocal} seçiyorum.`
+            );
+            // Continue to next step (don't return)
+          } else {
+            // Still missing info - send AI's response asking for missing fields
+            await this.whatsappService.sendTextMessage(from, settingsResult.response);
+            return; // Stay on same step, but conversation is saved with partial data
+          }
+        } else {
+          // Reset retry counter on success
+          conversation.retryCount = 0;
         }
 
         // All settings collected!
@@ -188,10 +212,10 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
         // Log analytics
         await this.firebaseService.logAnalytics('song_settings_completed', {
           phone: from,
-          songType: settingsResult.type,
-          songStyle: settingsResult.style,
-          vocal: settingsResult.vocal,
-          hasArtistStyle: !!settingsResult.artistStyleDescription,
+          songType: conversation.data.song1.type,
+          songStyle: conversation.data.song1.style,
+          vocal: conversation.data.song1.vocal,
+          hasArtistStyle: !!conversation.data.song1.artistStyleDescription,
           timestamp: new Date().toISOString(),
         });
 
@@ -235,14 +259,50 @@ Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
 
         // Check if ALL required fields are NOW present
         if (!conversation.data.recipientRelation || conversation.data.includeNameInSong === null || conversation.data.includeNameInSong === undefined) {
-          await this.whatsappService.sendTextMessage(from, recipientResult.response);
-          return; // Stay on same step, but conversation is saved with partial data
-        }
+          // Increment retry counter
+          conversation.retryCount = (conversation.retryCount || 0) + 1;
 
-        // If name should be included but not provided, ask again
-        if (conversation.data.includeNameInSong && !conversation.data.recipientName) {
-          await this.whatsappService.sendTextMessage(from, recipientResult.response);
-          return;
+          // After 2 failed attempts, use random defaults
+          if (conversation.retryCount >= 2) {
+            const randomRelations = ['Annem', 'Sevgilim', 'Arkadaşım', 'Ailem'];
+            const randomRelation = randomRelations[Math.floor(Math.random() * randomRelations.length)];
+
+            conversation.data.recipientRelation = randomRelation;
+            conversation.data.includeNameInSong = false;
+            conversation.retryCount = 0; // Reset counter
+
+            await this.whatsappService.sendTextMessage(
+              from,
+              `Üzgünüm, tam anlamadım 😊 Devam edebilmek için "${randomRelation}" seçiyorum ve isim kullanmadan devam ediyorum.`
+            );
+            // Continue to next step (don't return)
+          } else {
+            await this.whatsappService.sendTextMessage(from, recipientResult.response);
+            return; // Stay on same step, but conversation is saved with partial data
+          }
+        } else {
+          // If name should be included but not provided, ask again
+          if (conversation.data.includeNameInSong && !conversation.data.recipientName) {
+            conversation.retryCount = (conversation.retryCount || 0) + 1;
+
+            if (conversation.retryCount >= 2) {
+              // Use a default name
+              conversation.data.recipientName = 'Sevgili';
+              conversation.retryCount = 0;
+
+              await this.whatsappService.sendTextMessage(
+                from,
+                `İsmi anlayamadım, "Sevgili" olarak devam ediyorum 😊`
+              );
+              // Continue to next step
+            } else {
+              await this.whatsappService.sendTextMessage(from, recipientResult.response);
+              return;
+            }
+          }
+
+          // Reset retry counter on success
+          conversation.retryCount = 0;
         }
 
         // Log analytics
