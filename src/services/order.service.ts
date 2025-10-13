@@ -109,7 +109,21 @@ export class OrderService {
 
     // Handle special commands
     if (message.toLowerCase() === 'iptal' || message.toLowerCase() === 'cancel') {
-      // Log analytics: conversation abandoned
+      // Check if payment already made (lyrics_review or processing step)
+      if (conversation.step === 'lyrics_review_song1' || conversation.step === 'processing') {
+        await this.whatsappService.sendTextMessage(
+          from,
+          `⚠️ *Ödeme tamamlandıktan sonra iptal yapılamaz.*
+
+Herhangi bir sorun için lütfen iletişime geçin:
+📧 destek@bihediye.art
+
+Siparişiniz işleme devam ediyor...`
+        );
+        return;
+      }
+
+      // Log analytics: conversation abandoned (before payment)
       await this.firebaseService.logAnalytics('conversation_abandoned', {
         phone: from,
         step: conversation.step,
@@ -566,7 +580,7 @@ Ne yapmak istersiniz?
 2️⃣ ${remainingRevisions > 0 ? 'Tekrar Revize Et' : 'Revizyon hakkınız bitti'}
 
 ---
-💡 İptal etmek için *"iptal"* yazın.`
+💡 Destek: destek@bihediye.art`
               );
             }
           }
@@ -1096,7 +1110,7 @@ Ne yapmak istersiniz?
 2️⃣ Revizyon İstiyorum (Değiştirmek istediğiniz kısmı yazın)
 
 ---
-💡 İptal etmek için *"iptal"* yazın.`
+💡 Destek: destek@bihediye.art`
       );
 
       console.log(`📝 Lyrics generated and sent to user for review: ${orderId}`);
