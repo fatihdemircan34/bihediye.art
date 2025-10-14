@@ -196,10 +196,13 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
         break;
 
       case 'song_settings':
-
+        // CRITICAL: Ensure conversation.data exists
+        if (!conversation.data) {
+          conversation.data = {};
+        }
 
         // Ensure song1 is initialized before accessing it
-        const existingSongData = (conversation.data?.song1 || {}) as any;
+        const existingSongData = (conversation.data.song1 || {}) as any;
 
         // Pass existing song data to avoid re-asking for already collected info
         const settingsResult = await this.aiConversationService.parseSongSettings(
@@ -278,6 +281,11 @@ Bu kişi sizin neyiniz? (Annem, Sevgilim, vb.)
         break;
 
       case 'recipient_info':
+        // CRITICAL: Ensure conversation.data exists
+        if (!conversation.data) {
+          conversation.data = {};
+        }
+
         // PROGRESSIVE: Pass existing recipient data to avoid re-asking
         const existingRecipient = {
           relation: conversation.data.recipientRelation,
@@ -378,6 +386,11 @@ Not: Slow tempo olsun"
         break;
 
       case 'story_and_notes':
+        // CRITICAL: Ensure conversation.data exists
+        if (!conversation.data) {
+          conversation.data = {};
+        }
+
         const storyResult = await this.aiConversationService.parseStoryAndNotes(message);
 
         if (!storyResult.story) {
