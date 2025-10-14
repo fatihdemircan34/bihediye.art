@@ -197,7 +197,7 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
 
       case 'song_settings':
         // Initialize song1 if it doesn't exist
-        if (!conversation.data.song1) {
+        if (!conversation.data?.song1) {
           conversation.data.song1 = {} as any;
         }
 
