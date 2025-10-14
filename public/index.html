@@ -277,7 +277,15 @@
         </div>
     </div>
 </footer>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-NKJFSX6SYY"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
 
+    gtag('config', 'G-NKJFSX6SYY');
+</script>
 <script>
     // Smooth scroll
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -288,6 +296,57 @@
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });
+    });
+
+    // WhatsApp button tracking
+    document.addEventListener('DOMContentLoaded', function() {
+        // Header WhatsApp button
+        const headerBtn = document.querySelector('header .btn-wa');
+        if (headerBtn) {
+            headerBtn.addEventListener('click', function() {
+                gtag('event', 'whatsapp_button_ust', {
+                    'event_category': 'engagement',
+                    'event_label': 'Header WhatsApp Button',
+                    'value': 1
+                });
+            });
+        }
+
+        // Hero WhatsApp button
+        const heroBtn = document.querySelector('.hero-cta .btn-wa');
+        if (heroBtn) {
+            heroBtn.addEventListener('click', function() {
+                gtag('event', 'whatsapp_button_orta', {
+                    'event_category': 'engagement',
+                    'event_label': 'Hero WhatsApp Button',
+                    'value': 1
+                });
+            });
+        }
+
+        // Pricing WhatsApp button
+        const pricingBtn = document.querySelector('.pricing .btn-wa');
+        if (pricingBtn) {
+            pricingBtn.addEventListener('click', function() {
+                gtag('event', 'whatsapp_button_yan', {
+                    'event_category': 'engagement',
+                    'event_label': 'Pricing WhatsApp Button',
+                    'value': 1
+                });
+            });
+        }
+
+        // CTA WhatsApp button
+        const ctaBtn = document.querySelector('.cta .btn-wa');
+        if (ctaBtn) {
+            ctaBtn.addEventListener('click', function() {
+                gtag('event', 'whatsapp_button_alt', {
+                    'event_category': 'engagement',
+                    'event_label': 'CTA WhatsApp Button',
+                    'value': 1
+                });
+            });
+        }
     });
 </script>
 </body>
