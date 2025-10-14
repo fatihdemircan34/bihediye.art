@@ -822,8 +822,22 @@ Teşekkür ederiz! ❤️`
         await this.firebaseService.deleteConversation(conversation.phone);
         console.log(`🗑️ Conversation deleted for ${conversation.phone} (0 TL order)`);
 
-        // Start processing immediately (handlePaymentSuccess will update status and process)
-        await this.handlePaymentSuccess(orderId);
+        // Update order status to 'paid' (no payment needed, just mark as ready to process)
+        await this.firebaseService.updateOrder(orderId, {
+          status: 'paid',
+          paidAt: new Date(),
+        });
+
+        // Log analytics: free order completed (no payment)
+        await this.firebaseService.logAnalytics('free_order_processing', {
+          orderId,
+          phone: conversation.phone,
+          discountCode: conversation.discountCode,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Start processing DIRECTLY (skip lyrics review, no "Ödeme Başarılı!" message)
+        await this.processOrder(orderId);
 
         return;
       }

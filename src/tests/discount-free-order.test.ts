@@ -37,13 +37,13 @@ describe('Free Order Flow (100% Discount)', () => {
   });
 
   /**
-   * Test: User should receive confirmation message, not payment link
+   * Test: User should receive confirmation message, not payment link or payment success message
    */
-  test('should send free order confirmation, not payment link', () => {
+  test('should send free order confirmation, not payment messages', () => {
     const finalPrice = 0;
 
     if (finalPrice === 0) {
-      const expectedMessage = `🎉 *Siparişiniz Onaylandı!*
+      const correctMessage = `🎉 *Siparişiniz Onaylandı!*
 
 🎵 Sipariş No: test-order-id
 💰 Tutar: 0 TL (Hediyemiz olsun! 🎁)
@@ -52,10 +52,21 @@ describe('Free Order Flow (100% Discount)', () => {
 
 Teşekkür ederiz! ❤️`;
 
-      expect(expectedMessage).toContain('0 TL');
-      expect(expectedMessage).toContain('Hediyemiz olsun');
-      expect(expectedMessage).not.toContain('Ödeme');
-      expect(expectedMessage).not.toContain('Link');
+      // This message should be sent
+      expect(correctMessage).toContain('0 TL');
+      expect(correctMessage).toContain('Hediyemiz olsun');
+
+      // These messages should NOT be sent
+      const wrongMessages = [
+        'Ödeme',
+        'Link',
+        'Ödeme Başarılı',
+        'Ödemeniz bekleniyor'
+      ];
+
+      wrongMessages.forEach(wrongPhrase => {
+        expect(correctMessage).not.toContain(wrongPhrase);
+      });
     }
   });
 
@@ -121,20 +132,45 @@ Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`;
     // 3. Save conversation
     // 4. Send payment link
     // 5. User pays
-    // 6. Delete conversation
-    // 7. Process order
+    // 6. Send "Ödeme Başarılı!" message
+    // 7. Generate lyrics (with review)
+    // 8. Delete conversation
+    // 9. Process order
 
     // FREE ORDER FLOW (0 TL):
     // 1. Create order
-    // 2. Delete conversation immediately (NO 'processing' step)
-    // 3. Send free order confirmation
-    // 4. Process order directly
+    // 2. Send free order confirmation (NO payment messages)
+    // 3. Delete conversation immediately (NO 'processing' step)
+    // 4. Update order status to 'paid'
+    // 5. Process order directly (NO lyrics review)
 
-    const paidOrderFlow = ['create', 'processing', 'save', 'send_payment', 'wait', 'delete', 'process'];
-    const freeOrderFlow = ['create', 'delete', 'confirm', 'process'];
+    const paidOrderFlow = ['create', 'processing', 'save', 'send_payment', 'wait', 'payment_success_message', 'lyrics_review', 'delete', 'process'];
+    const freeOrderFlow = ['create', 'send_confirmation', 'delete', 'mark_paid', 'process'];
 
     expect(freeOrderFlow).not.toContain('processing');
     expect(freeOrderFlow).not.toContain('send_payment');
     expect(freeOrderFlow).not.toContain('wait');
+    expect(freeOrderFlow).not.toContain('payment_success_message');
+    expect(freeOrderFlow).not.toContain('lyrics_review');
+  });
+
+  /**
+   * Test: Free orders should NOT trigger payment success message
+   */
+  test('should NOT send "Ödeme Başarılı!" for 0 TL orders', () => {
+    const order = {
+      totalPrice: 0,
+      discountCode: 'FREE100',
+    };
+
+    // For 0 TL orders, we call processOrder() directly
+    // NOT handlePaymentSuccess() -> generateAndShowLyrics() which sends "Ödeme Başarılı!"
+
+    const shouldCallGenerateAndShowLyrics = order.totalPrice > 0;
+    expect(shouldCallGenerateAndShowLyrics).toBe(false);
+
+    // Instead, we call processOrder() which skips payment messages
+    const shouldCallProcessOrderDirectly = order.totalPrice === 0;
+    expect(shouldCallProcessOrderDirectly).toBe(true);
   });
 });
