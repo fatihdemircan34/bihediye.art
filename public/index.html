@@ -1,296 +1,294 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>bihediye.art | Kişiye Özel Şarkı – Sevdiklerinizi Duygulandırmaya Hazır Olun!</title>
-  <meta name="description" content="Kişiye özel şarkı yapma servisi. Mesajınızı ve anınızı bir besteye dönüştürüyoruz. Sevdiklerinizi duygulandırmaya hazır olun!" />
-  <meta property="og:title" content="Kişiye Özel Şarkı – bihediye.art" />
-  <meta property="og:description" content="Mesajınızı bir şarkıya dönüştürün. Yıllarca hatırlansın." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://bihediye.art" />
-  <meta name="theme-color" content="#0ea5e9" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>bihediye.art | Kişiye Özel Şarkı – Sevdiklerinizi Duygulandırmaya Hazır Olun!</title>
+    <meta name="description" content="Kişiye özel şarkı yapma servisi. Mesajınızı ve anınızı bir besteye dönüştürüyoruz. Sevdiklerinizi duygulandırmaya hazır olun!" />
+    <meta property="og:title" content="Kişiye Özel Şarkı – bihediye.art" />
+    <meta property="og:description" content="Mesajınızı bir şarkıya dönüştürün. Yıllarca hatırlansın." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://bihediye.art" />
+    <meta name="theme-color" content="#0ea5e9" />
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
 
-  <style>
-    :root{
-      --bg:#070a1a;
-      --panel:#0e1530;
-      --text:#f5f9ff;
-      --muted:#a9bbd6;
-      --brand:#ff6bcb;
-      --brand-2:#3ac9ff;
-      --ring: 0 0 0 6px rgba(255,107,203,.22);
-      --radius: 16px;
-      --maxw: 1120px;
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{margin:0;height:100%;background:
-      radial-gradient(1200px 800px at 80% -10%,rgba(58,201,255,.25),transparent),
-      radial-gradient(900px 600px at -10% 20%,rgba(255,107,203,.25),transparent),
-      linear-gradient(180deg,#070a1a,#0a1030 40%, #070a1a 100%);
-      color:var(--text);
-      font-family:"Poppins",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
-      overflow-x:hidden}
-    a{color:inherit;text-decoration:none}
-    img{max-width:100%;display:block}
-    .container{max-width:var(--maxw);margin-inline:auto;padding:0 20px}
-    @keyframes shine{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-    @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+    <style>
+        :root{
+            --bg:#070a1a;
+            --panel:#0e1530;
+            --text:#f5f9ff;
+            --muted:#a9bbd6;
+            --brand:#ff6bcb;
+            --brand-2:#3ac9ff;
+            --ring: 0 0 0 6px rgba(255,107,203,.22);
+            --radius: 16px;
+            --maxw: 1120px;
+        }
+        *{box-sizing:border-box;margin:0;padding:0}
+        html,body{margin:0;height:100%;background:
+                radial-gradient(1200px 800px at 80% -10%,rgba(58,201,255,.25),transparent),
+                radial-gradient(900px 600px at -10% 20%,rgba(255,107,203,.25),transparent),
+                linear-gradient(180deg,#070a1a,#0a1030 40%, #070a1a 100%);
+            color:var(--text);
+            font-family:"Poppins",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+            overflow-x:hidden}
+        a{color:inherit;text-decoration:none}
+        img{max-width:100%;display:block}
+        .container{max-width:var(--maxw);margin-inline:auto;padding:0 20px}
+        @keyframes shine{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+        @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-20px)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 
-    /* Header */
-    header{position:sticky;top:0;z-index:50;background:linear-gradient(rgba(11,16,32,.85),rgba(11,16,32,.6));backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
-    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0;flex-wrap:wrap;gap:10px}
-    .brand{display:flex;gap:10px;align-items:center;font-weight:700;font-size:clamp(16px,4vw,18px)}
-    .logo{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 8px 24px rgba(255,107,203,.35)}
-    nav ul{display:flex;gap:20px;list-style:none;margin:0;padding:0}
-    nav a{color:var(--muted);font-weight:500;font-size:14px}
-    nav a:hover{color:#fff}
-    .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;font-weight:700;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#031022;box-shadow:0 10px 30px rgba(58,201,255,.35);transition:transform .15s ease, box-shadow .2s ease;border:none;cursor:pointer;font-size:clamp(14px,2.5vw,16px)}
-    .btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(255,107,203,.35)}
-    .btn-wa{background:linear-gradient(135deg,#25d366,#128c7e)}
-    .btn-wa:hover{box-shadow:0 16px 40px rgba(37,211,102,.45)}
+        /* Header */
+        header{position:sticky;top:0;z-index:50;background:linear-gradient(rgba(11,16,32,.85),rgba(11,16,32,.6));backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.06)}
+        .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0;flex-wrap:wrap;gap:10px}
+        .brand{display:flex;gap:10px;align-items:center;font-weight:700;font-size:clamp(16px,4vw,18px)}
+        .logo{width:36px;height:36px;display:grid;place-items:center;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:0 8px 24px rgba(255,107,203,.35)}
+        nav ul{display:flex;gap:20px;list-style:none;margin:0;padding:0}
+        nav a{color:var(--muted);font-weight:500;font-size:14px}
+        nav a:hover{color:#fff}
+        .btn{display:inline-flex;align-items:center;gap:8px;padding:12px 18px;border-radius:999px;font-weight:700;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#031022;box-shadow:0 10px 30px rgba(58,201,255,.35);transition:transform .15s ease, box-shadow .2s ease;border:none;cursor:pointer;font-size:clamp(14px,2.5vw,16px)}
+        .btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(255,107,203,.35)}
+        .btn-wa{background:linear-gradient(135deg,#25d366,#128c7e)}
+        .btn-wa:hover{box-shadow:0 16px 40px rgba(37,211,102,.45)}
 
-    /* Hero */
-    .hero{padding:clamp(40px,10vw,72px) 0 48px}
-    .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center}
-    .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(34,211,238,.12);color:#aef; font-weight:600;font-size:clamp(12px,2.2vw,14px)}
-    .title{font-size:clamp(28px,6vw,56px);line-height:1.08;margin:16px 0}
-    .subtitle{color:var(--muted);font-size:clamp(16px,2.4vw,19px);line-height:1.6}
-    .hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:22px}
-    .btn-outline{padding:12px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.25);color:#fff;backdrop-filter: blur(4px);font-size:clamp(14px,2.5vw,16px)}
-    .btn-outline:hover{border-color:rgba(255,255,255,.55)}
-    .card{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.09);border-radius:var(--radius);padding:18px}
-    .mglass{height:100%;min-height:280px;border-radius:var(--radius);display:grid;place-items:center;position:relative;overflow:hidden}
-    .vinyl{width:min(360px,90%);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffffff66 0 2px,transparent 2px),conic-gradient(from 0deg,rgba(255,255,255,.06) 0 10%,transparent 10% 20%,rgba(255,255,255,.06) 20% 30%,transparent 30% 40%,rgba(255,255,255,.06) 40% 50%,transparent 50% 60%,rgba(255,255,255,.06) 60% 70%,transparent 70% 80%,rgba(255,255,255,.06) 80% 90%,transparent 90% 100%),radial-gradient(circle at center, #101b52 0 48%, #01060f 49% 50%, #101b52 51% 100%);
-      box-shadow:inset 0 0 140px rgba(58,201,255,.28),0 30px 80px rgba(0,0,0,.55);position:relative;animation:float 6s ease-in-out infinite}
-    .vinyl::before{content:"";position:absolute;inset:-2px;border-radius:50%;padding:2px;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--brand));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:shine 6s linear infinite}
-    .vinyl::after{content:"♪";position:absolute;inset:auto;display:grid;place-items:center;font-size:48px;color:#9be3ff;animation:pulse 2s ease-in-out infinite}
+        /* Hero */
+        .hero{padding:clamp(40px,10vw,72px) 0 48px}
+        .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;align-items:center}
+        .eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(34,211,238,.12);color:#aef; font-weight:600;font-size:clamp(12px,2.2vw,14px)}
+        .title{font-size:clamp(28px,6vw,56px);line-height:1.08;margin:16px 0}
+        .subtitle{color:var(--muted);font-size:clamp(16px,2.4vw,19px);line-height:1.6}
+        .hero-cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:22px}
+        .btn-outline{padding:12px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.25);color:#fff;backdrop-filter: blur(4px);font-size:clamp(14px,2.5vw,16px)}
+        .btn-outline:hover{border-color:rgba(255,255,255,.55)}
+        .card{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.09);border-radius:var(--radius);padding:18px}
+        .mglass{height:100%;min-height:280px;border-radius:var(--radius);display:grid;place-items:center;position:relative;overflow:hidden}
+        .vinyl{width:min(360px,90%);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ffffff66 0 2px,transparent 2px),conic-gradient(from 0deg,rgba(255,255,255,.06) 0 10%,transparent 10% 20%,rgba(255,255,255,.06) 20% 30%,transparent 30% 40%,rgba(255,255,255,.06) 40% 50%,transparent 50% 60%,rgba(255,255,255,.06) 60% 70%,transparent 70% 80%,rgba(255,255,255,.06) 80% 90%,transparent 90% 100%),radial-gradient(circle at center, #101b52 0 48%, #01060f 49% 50%, #101b52 51% 100%);
+            box-shadow:inset 0 0 140px rgba(58,201,255,.28),0 30px 80px rgba(0,0,0,.55);position:relative;animation:float 6s ease-in-out infinite}
+        .vinyl::before{content:"";position:absolute;inset:-2px;border-radius:50%;padding:2px;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--brand));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:shine 6s linear infinite}
+        .vinyl::after{content:"♪";position:absolute;inset:auto;display:grid;place-items:center;font-size:48px;color:#9be3ff;animation:pulse 2s ease-in-out infinite}
 
-    /* Features */
-    .section{padding:clamp(32px,8vw,56px) 0}
-    .section h2{font-size:clamp(24px,4.5vw,36px);margin:0 0 14px}
-    .muted{color:var(--muted)}
-    .grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-    .feat{display:grid;gap:8px;padding:18px}
-    .feat b{font-size:clamp(16px,2.8vw,18px)}
-    .feat span{font-size:clamp(14px,2.2vw,16px)}
+        /* Features */
+        .section{padding:clamp(32px,8vw,56px) 0}
+        .section h2{font-size:clamp(24px,4.5vw,36px);margin:0 0 14px}
+        .muted{color:var(--muted)}
+        .grid-3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+        .feat{display:grid;gap:8px;padding:18px}
+        .feat b{font-size:clamp(16px,2.8vw,18px)}
+        .feat span{font-size:clamp(14px,2.2vw,16px)}
 
-    /* Steps */
-    .steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-    .step{padding:18px;position:relative}
-    .step-number{position:absolute;top:-12px;left:-12px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#031022;font-weight:800;box-shadow:0 12px 28px rgba(34,211,238,.3);font-size:20px}
-    .step h3{margin:10px 0 6px;font-size:clamp(16px,3vw,18px)}
-    .step p{font-size:clamp(14px,2.2vw,16px)}
+        /* Steps */
+        .steps{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+        .step{padding:18px;position:relative}
+        .step-number{position:absolute;top:-12px;left:-12px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#031022;font-weight:800;box-shadow:0 12px 28px rgba(34,211,238,.3);font-size:20px}
+        .step h3{margin:10px 0 6px;font-size:clamp(16px,3vw,18px)}
+        .step p{font-size:clamp(14px,2.2vw,16px)}
 
-    /* Pricing */
-    .pricing{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-    .price{padding:20px;display:grid;gap:10px}
-    .price .tag{display:inline-block;padding:6px 10px;border-radius:999px;font-size:clamp(11px,2vw,13px);background:rgba(34,211,238,.15);color:#aef;font-weight:700}
-    .price h3{margin:6px 0;font-size:clamp(18px,3.2vw,22px)}
-    .price ul{margin:0;padding-left:18px;color:var(--muted);font-size:clamp(13px,2.2vw,15px)}
-    .price ul li{margin:6px 0}
-    .price .btn{margin-top:8px;width:100%}
-    .price-value{font-size:clamp(28px,5vw,36px);font-weight:700}
+        /* Pricing */
+        .pricing{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+        .price{padding:20px;display:grid;gap:10px}
+        .price .tag{display:inline-block;padding:6px 10px;border-radius:999px;font-size:clamp(11px,2vw,13px);background:rgba(34,211,238,.15);color:#aef;font-weight:700}
+        .price h3{margin:6px 0;font-size:clamp(18px,3.2vw,22px)}
+        .price ul{margin:0;padding-left:18px;color:var(--muted);font-size:clamp(13px,2.2vw,15px)}
+        .price ul li{margin:6px 0}
+        .price .btn{margin-top:8px;width:100%}
+        .price-value{font-size:clamp(28px,5vw,36px);font-weight:700}
 
-    /* CTA */
-    .cta{display:grid;gap:20px;padding:clamp(24px,6vw,40px);text-align:center;max-width:700px;margin:0 auto}
-    .cta h2{font-size:clamp(24px,5vw,38px);margin-bottom:12px}
-    .cta .btn{font-size:clamp(16px,3vw,20px);padding:16px 32px;justify-content:center}
+        /* CTA */
+        .cta{display:grid;gap:20px;padding:clamp(24px,6vw,40px);text-align:center;max-width:700px;margin:0 auto}
+        .cta h2{font-size:clamp(24px,5vw,38px);margin-bottom:12px}
+        .cta .btn{font-size:clamp(16px,3vw,20px);padding:16px 32px;justify-content:center}
 
-    /* Footer */
-    footer{padding:36px 0;color:var(--muted);border-top:1px solid rgba(255,255,255,.08);margin-top:56px}
-    .foot{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;font-size:clamp(13px,2.2vw,15px)}
-    .foot a{color:#b9c9de}
+        /* Footer */
+        footer{padding:36px 0;color:var(--muted);border-top:1px solid rgba(255,255,255,.08);margin-top:56px}
+        .foot{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;font-size:clamp(13px,2.2vw,15px)}
+        .foot a{color:#b9c9de}
 
-    /* WhatsApp Icon */
-    .wa-icon{width:24px;height:24px}
+        /* WhatsApp Icon */
+        .wa-icon{width:24px;height:24px}
 
-    /* Responsive */
-    @media (max-width: 980px){
-      .hero-grid{grid-template-columns:1fr}
-      .vinyl{width:min(280px,80%)}
-    }
-    @media (max-width: 820px){
-      nav ul{display:none}
-      .hero-cta{flex-direction:column}
-      .hero-cta .btn, .hero-cta .btn-outline{width:100%;justify-content:center}
-    }
-    @media (max-width: 640px){
-      .grid-3,.steps,.pricing{grid-template-columns:1fr}
-      .container{padding:0 16px}
-    }
-  </style>
+        /* Responsive */
+        @media (max-width: 980px){
+            .hero-grid{grid-template-columns:1fr}
+            .vinyl{width:min(280px,80%)}
+        }
+        @media (max-width: 820px){
+            nav ul{display:none}
+            .hero-cta{flex-direction:column}
+            .hero-cta .btn, .hero-cta .btn-outline{width:100%;justify-content:center}
+        }
+        @media (max-width: 640px){
+            .grid-3,.steps,.pricing{grid-template-columns:1fr}
+            .container{padding:0 16px}
+        }
+    </style>
 </head>
 <body>
-  <header>
+<header>
     <div class="container nav">
-      <a href="#" class="brand" aria-label="bihediye.art ana sayfa">
-        <span class="logo" aria-hidden="true">🎵</span>
-        <span>bihediye.art</span>
-      </a>
-      <nav>
-        <ul>
-          <li><a href="#ozellikler">Özellikler</a></li>
-          <li><a href="#nasil">Nasıl Çalışır</a></li>
-          <li><a href="#fiyat">Fiyatlandırma</a></li>
-        </ul>
-      </nav>
-      <a class="btn btn-wa" href="https://wa.me/358414000738?text=Merhaba" target="_blank" rel="noopener">
-        <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-        WhatsApp
-      </a>
+        <a href="#" class="brand" aria-label="bihediye.art ana sayfa">
+            <span class="logo" aria-hidden="true">🎵</span>
+            <span>bihediye.art</span>
+        </a>
+        <nav>
+            <ul>
+                <li><a href="#ozellikler">Özellikler</a></li>
+                <li><a href="#nasil">Nasıl Çalışır</a></li>
+                <li><a href="#fiyat">Fiyatlandırma</a></li>
+            </ul>
+        </nav>
+        <a class="btn btn-wa" href="https://wa.me/16506006731?text=Merhaba" target="_blank" rel="noopener">
+            <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            WhatsApp
+        </a>
     </div>
-  </header>
+</header>
 
-  <main>
+<main>
     <!-- HERO -->
     <section class="hero">
-      <div class="container hero-grid">
-        <div>
-          <span class="eyebrow">KİŞİYE ÖZEL ŞARKI</span>
-          <h1 class="title">Sevdiklerinizi duygulandırmaya hazır olun! Mesajınızı <span style="background:linear-gradient(135deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent">bir şarkıya</span> dönüştürüyoruz.</h1>
-          <p class="subtitle">Doğum günü, yıldönümü, evlilik teklifi veya kurumsal sürprizler… Profesyonel söz‑beste, vokal ve miksaj ile <b>tamamen size özel</b> bir eser teslim ediyoruz.</p>
-          <div class="hero-cta">
-            <a class="btn btn-wa" href="https://wa.me/358414000738?text=Merhaba,%20kişiye%20özel%20şarkı%20hakkında%20bilgi%20almak%20istiyorum" target="_blank" rel="noopener">
-              <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-              WhatsApp ile Sipariş Ver
-            </a>
-            <a class="btn-outline" href="#nasil">Nasıl Çalışır?</a>
-          </div>
-          <p class="muted" style="margin-top:10px;font-size:clamp(12px,2vw,14px)">📱 WhatsApp üzerinden sipariş → 💬 2 saat içinde yanıt → 🎵 3-7 iş günü teslimat</p>
+        <div class="container hero-grid">
+            <div>
+                <span class="eyebrow">KİŞİYE ÖZEL ŞARKI</span>
+                <h1 class="title">Sevdiklerinizi duygulandırmaya hazır olun! Mesajınızı <span style="background:linear-gradient(135deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent">bir şarkıya</span> dönüştürüyoruz.</h1>
+                <p class="subtitle">Doğum günü, yıldönümü, evlilik teklifi veya kurumsal sürprizler… Profesyonel söz‑beste, vokal ve miksaj ile <b>tamamen size özel</b> bir eser teslim ediyoruz.</p>
+                <div class="hero-cta">
+                    <a class="btn btn-wa" href="https://wa.me/16506006731?text=Merhaba,%20kişiye%20özel%20şarkı%20hakkında%20bilgi%20almak%20istiyorum" target="_blank" rel="noopener">
+                        <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                        WhatsApp ile Sipariş Ver
+                    </a>
+                    <a class="btn-outline" href="#nasil">Nasıl Çalışır?</a>
+                </div>
+                <p class="muted" style="margin-top:10px;font-size:clamp(12px,2vw,14px)">📱 WhatsApp üzerinden sipariş → 💬 2 saat içinde yanıt → 🎵 3-7 iş günü teslimat</p>
+            </div>
+            <div class="mglass card" aria-hidden="true">
+                <div class="vinyl"></div>
+            </div>
         </div>
-        <div class="mglass card" aria-hidden="true">
-          <div class="vinyl"></div>
-        </div>
-      </div>
     </section>
 
     <!-- FEATURES -->
     <section id="ozellikler" class="section">
-      <div class="container">
-        <h2>Bi hediye değil, <span style="background:linear-gradient(135deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent">bir hikâye</span>.</h2>
-        <p class="muted">Duygularınız; söz, melodi ve profesyonel bir prodüksiyonla ölümsüzleşsin.</p>
-        <div class="grid-3" style="margin-top:12px">
-          <article class="card feat">
-            <b>Özelleştirilebilir Söz & Tarz</b>
-            <span class="muted">Sevdiğiniz tür: pop, akustik, rap, arabesk, jazz… hikâyeye uygun doku.</span>
-          </article>
-          <article class="card feat">
-            <b>Gerçek Vokal, Stüdyo Kalitesi</b>
-            <span class="muted">Profesyonel vokal, miks & mastering ile tüm platformlara uygun kalite.</span>
-          </article>
-          <article class="card feat">
-            <b>Teslim Seçenekleri</b>
-            <span class="muted">MP3 indirme, video klip, SoundCloud yükleme ve söz afişi.</span>
-          </article>
+        <div class="container">
+            <h2>Bi hediye değil, <span style="background:linear-gradient(135deg,var(--brand),var(--brand-2));-webkit-background-clip:text;background-clip:text;color:transparent">bir hikâye</span>.</h2>
+            <p class="muted">Duygularınız; söz, melodi ve profesyonel bir prodüksiyonla ölümsüzleşsin.</p>
+            <div class="grid-3" style="margin-top:12px">
+                <article class="card feat">
+                    <b>Özelleştirilebilir Söz & Tarz</b>
+                    <span class="muted">Sevdiğiniz tür: pop, akustik, rap, arabesk, jazz… hikâyeye uygun doku.</span>
+                </article>
+                <article class="card feat">
+                    <b>Gerçek Vokal, Stüdyo Kalitesi</b>
+                    <span class="muted">Profesyonel vokal, miks & mastering ile tüm platformlara uygun kalite.</span>
+                </article>
+                <article class="card feat">
+                    <b>Teslim Seçenekleri</b>
+                    <span class="muted">MP3 indirme ve söz afişi.</span>
+                </article>
+            </div>
         </div>
-      </div>
     </section>
 
     <!-- STEPS -->
     <section id="nasil" class="section">
-      <div class="container">
-        <h2>Nasıl Çalışır?</h2>
-        <div class="steps">
-          <div class="card step">
-            <div class="step-number">1</div>
-            <h3>WhatsApp'tan "Merhaba" Yaz</h3>
-            <p class="muted">Botumuz seni adım adım yönlendirecek. Şarkı türü, tarz, vokal ve hikayeni sor</p>
-          </div>
-          <div class="card step">
-            <div class="step-number">2</div>
-            <h3>AI Şarkını Oluşturuyor</h3>
-            <p class="muted">Minimax AI müziği, ChatGPT sözleri yazıyor. İlerleme bilgileri WhatsApp'tan gelecek.</p>
-          </div>
-          <div class="card step">
-            <div class="step-number">3</div>
-            <h3>Şarkını WhatsApp'tan Al</h3>
-            <p class="muted">2 saat içinde hazır! MP3, video ve SoundCloud linki doğrudan WhatsApp'a gelecek.</p>
-          </div>
+        <div class="container">
+            <h2>Nasıl Çalışır?</h2>
+            <div class="steps">
+                <div class="card step">
+                    <div class="step-number">1</div>
+                    <h3>WhatsApp'tan "Merhaba" Yaz</h3>
+                    <p class="muted">Botumuz seni adım adım yönlendirecek. Şarkı türü, tarz, vokal ve hikayeni sor</p>
+                </div>
+                <div class="card step">
+                    <div class="step-number">2</div>
+                    <h3>AI Şarkını Oluşturuyor</h3>
+                    <p class="muted">Bir Mesaj Bota yaz  İlerleme bilgileri WhatsApp'tan gelecek.</p>
+                </div>
+                <div class="card step">
+                    <div class="step-number">3</div>
+                    <h3>Şarkını WhatsApp'tan Al</h3>
+                    <p class="muted">Hemen hazır! MP3 linki doğrudan WhatsApp'a gelecek.</p>
+                </div>
+            </div>
         </div>
-      </div>
     </section>
 
     <!-- PRICING -->
     <section id="fiyat" class="section">
-      <div class="container">
-        <h2>Paketler</h2>
-        <p class="muted">Tamamen AI destekli, hızlı ve uygun fiyatlı.</p>
+        <div class="container">
+            <h2>Paketler</h2>
+            <p class="muted">Tamamen AI destekli, hızlı ve uygun fiyatlı.</p>
 
-        <div class="pricing">
-          <div class="card price" style="outline:2px solid rgba(255,107,203,.45)">
-            <span class="tag">Tek Fiyat</span>
-            <h3>2 Özel Şarkı</h3>
-            <p style="margin:0;font-size:clamp(13px,2.2vw,15px)"><s style="opacity:.7">₺785</s></p>
-            <p class="price-value" style="margin:.2rem 0 .6rem">₺350 <small class="muted" style="font-size:clamp(13px,2.2vw,15px)">vergiler dahil</small></p>
-            <ul>
-              <li>2 farklı tarzda <b>iki şarkı</b></li>
-              <li>AI ile söz yazımı (ChatGPT)</li>
-              <li>AI ile müzik üretimi (Minimax)</li>
-              <li>Tür, tarz ve vokal seçimi</li>
-              <li>MP3 teslim (ses dosyası)</li>
-              <li>WhatsApp üzerinden 2 saat</li>
-            </ul>
-            <a class="btn btn-wa" href="https://wa.me/+358414000738text=Merhaba,%202%20özel%20şarkı%20paketi%20almak%20istiyorum" target="_blank" rel="noopener">
-              <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-              Sipariş Ver
-            </a>
-          </div>
+            <div class="pricing">
+                <div class="card price" style="outline:2px solid rgba(255,107,203,.45)">
+                    <span class="tag">Tek Fiyat</span>
+                    <h3>Özel Şarkı</h3>
+                    <p style="margin:0;font-size:clamp(13px,2.2vw,15px)"><s style="opacity:.7">₺350</s></p>
+                    <p class="price-value" style="margin:.2rem 0 .6rem">₺150<small class="muted" style="font-size:clamp(13px,2.2vw,15px)">vergiler dahil</small></p>
+                    <ul>
+                        <li>farklı tarzda <b>şarkılar</b></li>
+                        <li>Tür, tarz ve vokal seçimi</li>
+                        <li>MP3 teslim (ses dosyası)</li>
+                        <li>WhatsApp üzerinden  hemen teslim</li>
+                    </ul>
+                    <a class="btn btn-wa" href="https://wa.me/+16506006731text=Merhaba,%202%20özel%20şarkı%20paketi%20almak%20istiyorum" target="_blank" rel="noopener">
+                        <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                        Sipariş Ver
+                    </a>
+                </div>
 
 
+            </div>
         </div>
-      </div>
     </section>
 
     <!-- CTA -->
     <section class="section">
-      <div class="container">
-        <div class="card cta">
-          <h2>Hemen Başlayalım 🎵</h2>
-          <p class="muted">WhatsApp'tan "merhaba" yazarak siparişini başlat. Botumuz sana tüm detayları soracak!</p>
-          <a class="btn btn-wa" href="https://wa.me/358414000738?text=Merhaba,%20kişiye%20özel%20şarkı%20siparişi%20vermek%20istiyorum" target="_blank" rel="noopener">
-            <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-            WhatsApp ile Başla
-          </a>
-          <p class="muted" style="margin-top:8px;font-size:clamp(12px,2vw,14px)">Tamamen otomatik • AI destekli • 2 saat içinde yanıt</p>
+        <div class="container">
+            <div class="card cta">
+                <h2>Hemen Başlayalım 🎵</h2>
+                <p class="muted">WhatsApp'tan "merhaba" yazarak siparişini başlat. Botumuz sana tüm detayları soracak!</p>
+                <a class="btn btn-wa" href="https://wa.me/16506006731?text=Merhaba,%20kişiye%20özel%20şarkı%20siparişi%20vermek%20istiyorum" target="_blank" rel="noopener">
+                    <svg class="wa-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                    WhatsApp ile Başla
+                </a>
+                <p class="muted" style="margin-top:8px;font-size:clamp(12px,2vw,14px)">Tamamen otomatik • AI destekli • 2 saat içinde yanıt</p>
+            </div>
         </div>
-      </div>
     </section>
-  </main>
+</main>
 
-  <footer>
+<footer>
     <div class="container foot">
-      <div>
-        <div>© 2025 bihediye.art • Kişiye Özel AI Şarkı Servisi</div>
-        <div style="margin-top:8px;font-size:clamp(12px,2vw,14px)">
-          📍 Yalı Mahallesi Hürriyet Sokak 12/A Maltepe/İstanbul<br>
-          📞 <a href="tel:+905308836294">+90 530 883 62 94</a>
+        <div>
+            <div>© 2025 bihediye.art • Kişiye Özel AI Şarkı Servisi</div>
+            <div style="margin-top:8px;font-size:clamp(12px,2vw,14px)">
+                📍 Yalı Mahallesi Hürriyet Sokak 12/A Maltepe/İstanbul<br>
+                📞 <a href="tel:+905308836294">+90 530 883 62 94</a>
+            </div>
         </div>
-      </div>
-      <div>
-          <a href="https://videodublaj.com" target="_blank" rel="noopener">Bir video dublaj & alt yazı ürünüdür</a> •
-          <a href="https://wa.me/358414000738" target="_blank" rel="noopener">WhatsApp</a> •
-        <a href="mailto:support@bihediye.art">E-posta</a>
-      </div>
+        <div>
+            <a href="https://videodublaj.com" target="_blank" rel="noopener">Bir video dublaj & alt yazı ürünüdür</a> •
+            <a href="https://wa.me/16506006731" target="_blank" rel="noopener">WhatsApp</a> •
+            <a href="mailto:support@bihediye.art">E-posta</a>
+        </div>
     </div>
-  </footer>
+</footer>
 
-  <script>
+<script>
     // Smooth scroll
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
     });
-  </script>
+</script>
 </body>
 </html>

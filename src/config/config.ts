@@ -53,8 +53,8 @@ export const config = {
 
   // Admin Panel Configuration
   admin: {
-    username: process.env.ADMIN_USERNAME || 'admin',
-    password: process.env.ADMIN_PASSWORD || 'changeme123',
+    username: process.env.ADMIN_USERNAME || '33563dddsdeaa387d0eb45dffffb4c73f77d7',
+    password: process.env.ADMIN_PASSWORD || 'c23a85b74d86fa13904sasdad4882ba8asdascbfaa84e421bc',
   },
 };
 
