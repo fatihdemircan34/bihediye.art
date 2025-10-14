@@ -164,7 +164,7 @@ export class OrderRoutes {
       order.status = 'lyrics_generating';
       await this.whatsappService.sendProgressUpdate(order.whatsappPhone, orderId, 'Şarkı sözleri yazılıyor...', 10);
 
-      const [song1Lyrics, song2Lyrics] = await Promise.all([
+      const [song1LyricsResult, song2LyricsResult] = await Promise.all([
         this.openaiService.generateLyrics({
           songDetails: order.orderData.song1,
           story: order.orderData.story,
@@ -183,8 +183,8 @@ export class OrderRoutes {
         }),
       ]);
 
-      order.song1Lyrics = song1Lyrics;
-      order.song2Lyrics = song2Lyrics;
+      order.song1Lyrics = song1LyricsResult.lyrics;
+      order.song2Lyrics = song2LyricsResult.lyrics;
 
       // Step 2: Generate music for both songs
       order.status = 'music_generating';
@@ -192,13 +192,13 @@ export class OrderRoutes {
 
       const [song1Task, song2Task] = await Promise.all([
         this.sunoService.generateMusic({
-          lyrics: song1Lyrics,
+          lyrics: song1LyricsResult.lyrics,
           songType: order.orderData.song1.type,
           style: order.orderData.song1.style,
           vocal: order.orderData.song1.vocal,
         }),
         this.sunoService.generateMusic({
-          lyrics: song2Lyrics,
+          lyrics: song2LyricsResult.lyrics,
           songType: order.orderData.song2.type,
           style: order.orderData.song2.style,
           vocal: order.orderData.song2.vocal,

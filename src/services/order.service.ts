@@ -201,40 +201,44 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
           conversation.data.song1 = {} as any;
         }
 
+        // Ensure song1 is initialized before accessing it
+        const existingSongData = (conversation.data.song1 || {}) as any;
+
         // Pass existing song data to avoid re-asking for already collected info
         const settingsResult = await this.aiConversationService.parseSongSettings(
           message,
-          conversation.data.song1 // Pass existing data if any
+          existingSongData
         );
 
         // PROGRESSIVE: Update conversation with collected data (even if partial)
         conversation.data.song1 = {
-          type: settingsResult.type || conversation.data.song1?.type,
-          style: settingsResult.style || conversation.data.song1?.style,
-          vocal: settingsResult.vocal || conversation.data.song1?.vocal,
-          artistStyleDescription: settingsResult.artistStyleDescription || conversation.data.song1?.artistStyleDescription,
+          type: settingsResult.type || existingSongData.type,
+          style: settingsResult.style || existingSongData.style,
+          vocal: settingsResult.vocal || existingSongData.vocal,
+          artistStyleDescription: settingsResult.artistStyleDescription || existingSongData.artistStyleDescription,
         } as any;
 
         console.log('💾 Updated conversation.data.song1:', conversation.data.song1);
 
         // Check if ALL required fields are NOW present
-        if (!conversation.data.song1.type || !conversation.data.song1.style || !conversation.data.song1.vocal) {
+        const currentSongData = (conversation.data.song1 || {}) as any;
+        if (!currentSongData.type || !currentSongData.style || !currentSongData.vocal) {
           // Increment retry counter
           conversation.retryCount = (conversation.retryCount || 0) + 1;
 
           // After 2 failed attempts, use random defaults
           if (conversation.retryCount >= 2) {
             conversation.data.song1 = {
-              type: conversation.data.song1?.type || 'Pop',
-              style: conversation.data.song1?.style || 'Eğlenceli',
-              vocal: conversation.data.song1?.vocal || 'Fark etmez',
-              artistStyleDescription: conversation.data.song1?.artistStyleDescription,
+              type: currentSongData.type || 'Pop',
+              style: currentSongData.style || 'Eğlenceli',
+              vocal: currentSongData.vocal || 'Fark etmez',
+              artistStyleDescription: currentSongData.artistStyleDescription,
             } as any;
             conversation.retryCount = 0; // Reset counter
 
             await this.whatsappService.sendTextMessage(
               from,
-              `Üzgünüm, tam anlamadım 😊 Devam edebilmek için ${conversation.data.song1.type}, ${conversation.data.song1.style}, ${conversation.data.song1.vocal} seçiyorum.`
+              `Üzgünüm, tam anlamadım 😊 Devam edebilmek için ${conversation.data.song1?.type || 'Pop'}, ${conversation.data.song1?.style || 'Eğlenceli'}, ${conversation.data.song1?.vocal || 'Fark etmez'} seçiyorum.`
             );
             // Continue to next step (don't return)
           } else {
@@ -650,11 +654,8 @@ Yeni sipariş başlatmak için *"merhaba"* yazabilirsiniz.`
       return;
     }
 
-    if (conversation.step === 'cover_photo' && mediaType === 'image') {
-      conversation.data.coverPhoto = mediaUrl;
-      await this.sendOrderConfirmation(conversation);
-      await this.firebaseService.saveConversation(conversation);
-    }
+    // Note: cover_photo step is deprecated (no longer used in WhatsApp flow)
+    // Media handling can be added here if needed for future features
   }
 
   /**
