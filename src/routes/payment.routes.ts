@@ -364,6 +364,30 @@ export function createPaymentRouter(
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Ödeme - bihediye.art</title>
+
+          <!-- Google tag (gtag.js) -->
+          <script async src="https://www.googletagmanager.com/gtag/js?id=G-NKJFSX6SYY"></script>
+          <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-NKJFSX6SYY');
+
+            // Begin checkout event
+            gtag('event', 'begin_checkout', {
+              transaction_id: '${order.id}',
+              value: ${order.totalPrice},
+              currency: 'TRY',
+              items: [{
+                item_id: '${order.id}',
+                item_name: 'AI Generated Song',
+                item_category: 'Music',
+                price: ${order.totalPrice},
+                quantity: 1
+              }]
+            });
+          </script>
+
           <style>
             * {
               margin: 0;
