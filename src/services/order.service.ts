@@ -794,9 +794,6 @@ ${pricingText}
         }
       }
 
-      conversation.step = 'processing';
-      await this.firebaseService.saveConversation(conversation);
-
       // Log analytics
       await this.firebaseService.logAnalytics('order_created', {
         orderId,
@@ -804,7 +801,7 @@ ${pricingText}
         totalPrice: order.totalPrice,
       });
 
-      // Check if order is free (0 TL) - skip payment
+      // Check if order is free (0 TL) - skip payment and delete conversation immediately
       if (order.totalPrice === 0) {
         console.log(`🎁 Free order detected (100% discount) - skipping payment for ${orderId}`);
 
@@ -830,6 +827,10 @@ Teşekkür ederiz! ❤️`
 
         return;
       }
+
+      // For paid orders, set to processing step and save conversation
+      conversation.step = 'processing';
+      await this.firebaseService.saveConversation(conversation);
 
       // Generate payment link and send
       if (this.paytrService) {
