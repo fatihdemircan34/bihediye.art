@@ -199,7 +199,7 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
         // Initialize song1 if it doesn't exist
         if (!conversation.data?.song1) {
           // @ts-ignore
-            conversation?.data?.song1 = {} as any;
+            conversation.data?.song1 = {} ;
         }
 
         // Ensure song1 is initialized before accessing it
