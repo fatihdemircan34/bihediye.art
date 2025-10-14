@@ -12,8 +12,23 @@ export function createPaymentRouter(
    * Başarılı ödeme sonrası yönlendirme sayfası
    * NOT: Bu route /:orderId'den ÖNCE olmalı!
    */
-  router.get('/success', (req: Request, res: Response) => {
+  router.get('/success', async (req: Request, res: Response) => {
     const { orderId } = req.query;
+
+    // Get order details for gtag event parameters
+    let orderAmount = 0;
+    let orderCurrency = 'TRY';
+    if (orderId && typeof orderId === 'string') {
+      try {
+        const order = await orderService.getOrder(orderId);
+        if (order) {
+          orderAmount = order.totalPrice;
+        }
+      } catch (error) {
+        console.error('Error fetching order for gtag:', error);
+      }
+    }
+
     res.send(`
       <!DOCTYPE html>
       <html>
@@ -21,6 +36,30 @@ export function createPaymentRouter(
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Ödeme Başarılı</title>
+
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-XXXXXXXXXX');
+
+          // Purchase event
+          gtag('event', 'purchase', {
+            transaction_id: '${orderId || ''}',
+            value: ${orderAmount},
+            currency: '${orderCurrency}',
+            items: [{
+              item_id: '${orderId || ''}',
+              item_name: 'AI Generated Song',
+              item_category: 'Music',
+              price: ${orderAmount},
+              quantity: 1
+            }]
+          });
+        </script>
+
         <style>
           body {
             font-family: Arial, sans-serif;
