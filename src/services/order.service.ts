@@ -196,6 +196,11 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
         break;
 
       case 'song_settings':
+        // Initialize song1 if it doesn't exist
+        if (!conversation.data.song1) {
+          conversation.data.song1 = {} as any;
+        }
+
         // Pass existing song data to avoid re-asking for already collected info
         const settingsResult = await this.aiConversationService.parseSongSettings(
           message,
