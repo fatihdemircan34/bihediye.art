@@ -111,8 +111,8 @@ export class OrderService {
     // Handle special commands (Turkish-aware lowercase)
     const messageLower = message.trim().toLocaleLowerCase('tr-TR');
     if (messageLower === 'iptal' || messageLower === 'cancel') {
-      // Check if payment already made (lyrics_review or processing step)
-      if (conversation.step === 'lyrics_review_song1' || conversation.step === 'processing') {
+      // Check if payment already made (lyrics_review step means payment completed)
+      if (conversation.step === 'lyrics_review_song1') {
         await this.whatsappService.sendTextMessage(
           from,
           `⚠️ *Ödeme tamamlandıktan sonra iptal yapılamaz.*
@@ -123,6 +123,28 @@ Herhangi bir sorun için lütfen iletişime geçin:
 Siparişiniz işleme devam ediyor...`
         );
         return;
+      }
+
+      // Check if processing step - verify if payment actually completed
+      if (conversation.step === 'processing') {
+        // Check order status to see if payment was made
+        const orders = await this.firebaseService.getOrdersByPhone(from);
+        const currentOrder = orders.find(o => o.status === 'paid' || o.status === 'lyrics_generating' || o.status === 'music_generating');
+
+        if (currentOrder) {
+          // Payment was completed - cannot cancel
+          await this.whatsappService.sendTextMessage(
+            from,
+            `⚠️ *Ödeme tamamlandıktan sonra iptal yapılamaz.*
+
+Herhangi bir sorun için lütfen iletişime geçin:
+📧 destek@bihediye.art
+
+Siparişiniz işleme devam ediyor...`
+          );
+          return;
+        }
+        // If no paid order found, allow cancellation (payment was not completed)
       }
 
       // Log analytics: conversation abandoned (before payment)
