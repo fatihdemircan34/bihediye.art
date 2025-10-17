@@ -606,12 +606,69 @@ Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
 DOLU olanları KORU (değiştirme!).
 
 **KRİTİK İSTİSNA: DÜZELTME (CORRECTION) ALGILA!**
-Eğer kullanıcı "değil", "demedim", "yanlış", "hayır öyle değil" gibi kelimeler kullanıyorsa:
-→ Bu bir DÜZELTME! Mevcut veriyi DEĞİŞTİR!
+Eğer kullanıcı düzeltme yapıyorsa → Mevcut veriyi DEĞİŞTİR!
 
-Örnekler:
-- "sakin demedim pozitif dedim" → style'ı "Sakin"den "Eğlenceli"ye DEĞİŞTİR
-- "kadın değil erkek olsun" → vocal'i "Kadın"dan "Erkek"e DEĞİŞTİR
+DÜZELTME SİNYALLERİ (DİKKATLE ALGI LA):
+✅ "değil", "demedim", "yanlış", "hayır öyle değil"
+✅ "hayır", "yok", "o değil"
+✅ "annem DEĞİL sevgilim" → relation değişti!
+✅ "kadın değil erkek" → vocal değişti!
+✅ "sakin demedim pozitif" → style değişti!
+✅ "pop değil rock" → type değişti!
+✅ "aslında X" / "X olacaktı"
+✅ "yanlış anladın" / "öyle değil"
+
+ÖRNEKLER (ÇOK ÖNEMLİ):
+
+1️⃣ BASIT DÜZELTME:
+Mevcut: relation="Annem"
+Kullanıcı: "hayır sevgilim"
+✅ {
+  "relation": "Sevgilim",
+  "includeNameInSong": null,
+  "name": null,
+  "response": "Düzeltildi! Sevgiliniz için şarkı hazırlıyoruz 💝"
+}
+
+2️⃣ "DEĞİL" PATTERN:
+Mevcut: relation="Annem"
+Kullanıcı: "annem değil sevgilim"
+✅ {
+  "relation": "Sevgilim",
+  "includeNameInSong": null,
+  "name": null,
+  "response": "Anladım! Sevgiliniz için şarkı hazırlıyoruz 💝"
+}
+
+3️⃣ "YOK" PATTERN:
+Mevcut: relation="Annem"
+Kullanıcı: "yok sevgilim"
+✅ {
+  "relation": "Sevgilim",
+  "includeNameInSong": null,
+  "name": null,
+  "response": "Düzeltildi! Sevgiliniz için şarkı hazırlıyoruz 💝"
+}
+
+4️⃣ VOCAL DÜZELTME:
+Mevcut: vocal="Kadın"
+Kullanıcı: "kadın değil erkek olsun"
+✅ {
+  "type": null,
+  "style": null,
+  "vocal": "Erkek",
+  "response": "Düzeltildi! Erkek sesiyle hazırlıyoruz 🎤"
+}
+
+5️⃣ STYLE DÜZELTME:
+Mevcut: style="Sakin"
+Kullanıcı: "sakin demedim pozitif dedim"
+✅ {
+  "type": null,
+  "style": "Pozitif",
+  "vocal": null,
+  "response": "Anladım! Pozitif tarzda hazırlıyoruz 🎵"
+}
 
 =========================================
 ÇOK ÖNEMLİ: ESNEKLİK!
@@ -818,6 +875,48 @@ Bu şarkı HERHANGİ BİR ŞEY İÇİN olabilir:
 GÖREV:
 Kullanıcının yeni mesajından EKSİK olan bilgileri çıkar.
 DOLU olanları KORU (değiştirme!).
+
+**KRİTİK İSTİSNA: DÜZELTME (CORRECTION) ALGILA!**
+Kullanıcı düzeltme yapıyorsa → Mevcut veriyi DEĞİŞTİR!
+
+DÜZELTME SİNYALLERİ:
+✅ "değil", "demedim", "yanlış", "hayır öyle değil"
+✅ "hayır", "yok", "o değil", "aslında"
+✅ "annem değil sevgilim" → relation değişti!
+✅ "hayır sevgilim" → relation değişti!
+✅ "evet değil hayır" → includeNameInSong değişti!
+
+ÖRNEKLER:
+
+Düzeltme 1:
+Mevcut: relation="Annem", includeNameInSong=null, name=null
+Kullanıcı: "hayır sevgilim"
+✅ {
+  "relation": "Sevgilim",
+  "includeNameInSong": null,
+  "name": null,
+  "response": "Düzeltildi! Sevgiliniz için şarkı hazırlıyoruz 💝"
+}
+
+Düzeltme 2:
+Mevcut: relation="Annem", includeNameInSong=null, name=null
+Kullanıcı: "annem değil arkadaşım"
+✅ {
+  "relation": "Arkadaşım",
+  "includeNameInSong": null,
+  "name": null,
+  "response": "Anladım! Arkadaşınız için şarkı hazırlıyoruz 💝"
+}
+
+Düzeltme 3:
+Mevcut: relation="Sevgilim", includeNameInSong=true, name=null
+Kullanıcı: "hayır geçmesin"
+✅ {
+  "relation": "Sevgilim",
+  "includeNameInSong": false,
+  "name": null,
+  "response": "Anladım! Sevgiliniz için şarkı hazırlıyoruz, isim geçmeyecek 💝"
+}
 
 KRİTİK: AŞIRI ESNEK OL!
 - "bir sehir aski" → relation: "Bir Şehir Aşkı" (kabul et!)
