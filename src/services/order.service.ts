@@ -184,15 +184,18 @@ Sevdiklerinize yapay zeka ile özel şarkı hediye edin! 💝
 
 💰 ${config.pricing.songBasePrice} TL | ⏱️ 2 saat teslimat
 
-*Şarkınızı özelleştirelim:*
+*📝 İKİ YÖNTEM:*
+
+*1️⃣ TEK MESAJDA HER ŞEYİ YAZIN:*
+Örnek: "Annem için Pop tarzında Romantik bir şarkı, Kadın sesi olsun. İsmini geçsin, adı Ayşe. 30 yıldır bize fedakarlıkla baktı, her zaman yanımızda oldu..."
+
+*2️⃣ ADIM ADIM İLERLEYELİM:*
 🎵 Tür: Pop, Rap, Jazz, Arabesk, Klasik, Rock, Metal, Nostaljik
 🎭 Tarz: Romantik, Duygusal, Eğlenceli, Sakin
 🎤 Vokal: Kadın, Erkek, Fark etmez
 
-Örnek: "Pop, Romantik, Kadın" veya "Arabesk duygusal"
-
 ---
-💡 İptal etmek için *"iptal"* yazın.`
+💡 İptal: *"iptal"* yazın`
         );
         conversation.step = 'song_settings';
         break;
