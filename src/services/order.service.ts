@@ -107,8 +107,9 @@ export class OrderService {
     // Update last activity
     conversation.lastUpdated = new Date();
 
-    // Handle special commands
-    if (message.toLowerCase() === 'iptal' || message.toLowerCase() === 'cancel') {
+    // Handle special commands (Turkish-aware lowercase)
+    const messageLower = message.trim().toLocaleLowerCase('tr-TR');
+    if (messageLower === 'iptal' || messageLower === 'cancel') {
       // Check if payment already made (lyrics_review or processing step)
       if (conversation.step === 'lyrics_review_song1' || conversation.step === 'processing') {
         await this.whatsappService.sendTextMessage(
