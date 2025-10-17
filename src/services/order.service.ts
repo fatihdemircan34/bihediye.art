@@ -706,8 +706,10 @@ Ne yapmak istersiniz?
         break;
 
       case 'processing':
-        // User is waiting for payment - check if they want a new payment link
-        if (message.trim() === '1') {
+        // User is waiting for payment - check for different actions
+        const trimmedMessage = message.trim();
+
+        if (trimmedMessage === '1') {
           // User wants a new payment link
           const orders = await this.firebaseService.getOrdersByPhone(from);
           const pendingOrder = orders.find(o => o.status === 'payment_pending');
@@ -728,23 +730,124 @@ Yeni sipariş için "merhaba" yazabilirsiniz.`
             );
           }
           return false; // Don't save conversation
-        } else {
-          // User sent a different message - inform them about waiting for payment
-          await this.whatsappService.sendTextMessage(
-            from,
-            `⏳ *Ödemeniz bekleniyor...*
+        } else if (trimmedMessage.length >= 3 && /^[A-Z0-9]+$/i.test(trimmedMessage)) {
+          // User might be entering a discount code (3+ alphanumeric characters)
+          const orders = await this.firebaseService.getOrdersByPhone(from);
+          const pendingOrder = orders.find(o => o.status === 'payment_pending');
+
+          if (pendingOrder && !pendingOrder.discountCode) {
+            // Try to apply discount code
+            const discountResult = await this.discountService.validateAndApplyDiscount(
+              trimmedMessage.toUpperCase(),
+              from,
+              pendingOrder.totalPrice
+            );
+
+            if (discountResult.isValid && discountResult.discountCode) {
+              // Calculate new price
+              const newFinalPrice = discountResult.finalPrice;
+              const discountAmount = discountResult.discountAmount;
+
+              // Update order with discount
+              await this.firebaseService.updateOrder(pendingOrder.id, {
+                discountCode: discountResult.discountCode.code,
+                discountAmount: discountAmount,
+                totalPrice: newFinalPrice,
+              });
+
+              // Record discount usage
+              await this.discountService.recordDiscountUsage(
+                discountResult.discountCode.id,
+                pendingOrder.id,
+                from,
+                discountAmount,
+                pendingOrder.totalPrice,
+                newFinalPrice
+              );
+
+              // Send success message and new payment link
+              if (newFinalPrice === 0) {
+                // 100% discount - free order!
+                await this.whatsappService.sendTextMessage(
+                  from,
+                  `🎁 *İndirim Kodu Uygulandı!*
+
+${discountResult.message}
+
+💰 Yeni Tutar: 0 TL (Hediyemiz olsun! 🎁)
+
+Ödeme gerekmeden siparişiniz hazırlanacaktır! 🎵`
+                );
+
+                // Update order to paid status
+                await this.firebaseService.updateOrder(pendingOrder.id, {
+                  status: 'paid',
+                  paidAt: new Date(),
+                });
+
+                // Delete conversation
+                await this.firebaseService.deleteConversation(from);
+
+                // Start lyrics generation
+                await this.generateAndShowLyrics(pendingOrder.id);
+              } else {
+                // Partial discount - send new payment link
+                await this.whatsappService.sendTextMessage(
+                  from,
+                  `✅ *İndirim Kodu Uygulandı!*
+
+${discountResult.message}
+
+💰 Eski Tutar: ${pendingOrder.totalPrice} TL
+🎁 İndirim: -${discountAmount} TL
+✨ Yeni Tutar: ${newFinalPrice} TL
+
+Yeni ödeme linki oluşturuluyor... 🔄`
+                );
+
+                // Generate new payment link with updated price
+                await this.sendPaymentLink({
+                  ...pendingOrder,
+                  totalPrice: newFinalPrice,
+                  discountCode: discountResult.discountCode.code,
+                  discountAmount: discountAmount,
+                });
+              }
+
+              console.log(`✅ Discount code ${discountResult.discountCode.code} applied to order ${pendingOrder.id}`);
+            } else {
+              // Invalid discount code
+              await this.whatsappService.sendTextMessage(
+                from,
+                `${discountResult.message}
+
+⏳ *Ödemeniz bekleniyor...*
 
 Ödeme linkini kullanarak ödemeyi tamamlayın.
 
-💡 *Link geçersiz olduysa:*
-Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.
-
----
-
-Yeni sipariş başlatmak için *"merhaba"* yazabilirsiniz.`
-          );
-          return false; // Don't save conversation
+💡 *Seçenekler:*
+• Rakam *"1"* yazarak yeni link alabilirsiniz
+• İndirim kodunuz varsa yazabilirsiniz
+• *"iptal"* yazarak siparişi iptal edebilirsiniz`
+              );
+            }
+            return false; // Don't save conversation
+          }
         }
+
+        // Default message - inform about waiting for payment
+        await this.whatsappService.sendTextMessage(
+          from,
+          `⏳ *Ödemeniz bekleniyor...*
+
+Ödeme linkini kullanarak ödemeyi tamamlayın.
+
+💡 *Seçenekler:*
+• Rakam *"1"* yazarak yeni link alabilirsiniz
+• İndirim kodunuz varsa yazabilirsiniz
+• *"iptal"* yazarak siparişi iptal edebilirsiniz`
+        );
+        return false; // Don't save conversation
         break;
     }
   }
@@ -1079,8 +1182,10 @@ Sipariş numaranız: ${orderId}`
 
 ---
 
-💡 *Link geçersiz olduysa:*
-Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`
+💡 *Seçenekler:*
+• Rakam *"1"* yazarak yeni link alabilirsiniz
+• İndirim kodunuz varsa yazabilirsiniz
+• *"iptal"* yazarak siparişi iptal edebilirsiniz`
         );
 
         // Store payment token in order
