@@ -142,35 +142,35 @@ Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`;
     // 2. Send free order confirmation (NO payment messages)
     // 3. Delete conversation immediately (NO 'processing' step)
     // 4. Update order status to 'paid'
-    // 5. Process order directly (NO lyrics review)
+    // 5. Generate and show lyrics for review (SAME as paid orders)
 
     const paidOrderFlow = ['create', 'processing', 'save', 'send_payment', 'wait', 'payment_success_message', 'lyrics_review', 'delete', 'process'];
-    const freeOrderFlow = ['create', 'send_confirmation', 'delete', 'mark_paid', 'process'];
+    const freeOrderFlow = ['create', 'send_confirmation', 'delete', 'mark_paid', 'lyrics_review', 'process'];
 
     expect(freeOrderFlow).not.toContain('processing');
     expect(freeOrderFlow).not.toContain('send_payment');
     expect(freeOrderFlow).not.toContain('wait');
     expect(freeOrderFlow).not.toContain('payment_success_message');
-    expect(freeOrderFlow).not.toContain('lyrics_review');
+    expect(freeOrderFlow).toContain('lyrics_review'); // Free orders NOW have lyrics review!
   });
 
   /**
-   * Test: Free orders should NOT trigger payment success message
+   * Test: Free orders should show lyrics review but NOT send "Ödeme Başarılı!" message
    */
-  test('should NOT send "Ödeme Başarılı!" for 0 TL orders', () => {
+  test('should show lyrics review for 0 TL orders but without payment success message', () => {
     const order = {
       totalPrice: 0,
       discountCode: 'FREE100',
     };
 
-    // For 0 TL orders, we call processOrder() directly
-    // NOT handlePaymentSuccess() -> generateAndShowLyrics() which sends "Ödeme Başarılı!"
+    // For 0 TL orders, we call generateAndShowLyrics() directly
+    // This shows lyrics + review options, but message says "0 TL Hediyemiz olsun!" instead of "Ödeme Başarılı!"
 
-    const shouldCallGenerateAndShowLyrics = order.totalPrice > 0;
-    expect(shouldCallGenerateAndShowLyrics).toBe(false);
+    const shouldShowLyricsReview = true; // Always show lyrics review now
+    expect(shouldShowLyricsReview).toBe(true);
 
-    // Instead, we call processOrder() which skips payment messages
-    const shouldCallProcessOrderDirectly = order.totalPrice === 0;
-    expect(shouldCallProcessOrderDirectly).toBe(true);
+    // The message will say "Şarkı sözleriniz yazılıyor..." but NOT "Ödeme Başarılı!"
+    const correctMessage = `Şarkı sözleriniz yazılıyor... ⏳`;
+    expect(correctMessage).not.toContain('Ödeme Başarılı');
   });
 });

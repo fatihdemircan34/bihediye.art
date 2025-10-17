@@ -836,8 +836,8 @@ Teşekkür ederiz! ❤️`
           timestamp: new Date().toISOString(),
         });
 
-        // Start processing DIRECTLY (skip lyrics review, no "Ödeme Başarılı!" message)
-        await this.processOrder(orderId);
+        // Generate lyrics and show to user for review (same as paid orders, but with free message)
+        await this.generateAndShowLyrics(orderId);
 
         return;
       }
@@ -1073,16 +1073,23 @@ Sadece rakam *"1"* (bir) yazın, yeni link gönderelim.`
       order.status = 'lyrics_generating';
       await this.firebaseService.updateOrder(orderId, { status: 'lyrics_generating' });
 
-      // Send single combined message: payment success + lyrics generating
-      await this.whatsappService.sendTextMessage(
-        order.whatsappPhone,
-        `✅ *Ödeme Başarılı!*
+      // Different message for free vs paid orders
+      const isFreeOrder = order.totalPrice === 0;
+      const statusMessage = isFreeOrder
+        ? `🎁 *Sipariş Onaylandı!*
+
+🎵 Sipariş No: ${orderId}
+💰 0 TL (Hediyemiz olsun! 🎁)
+
+Şarkı sözleriniz yazılıyor... ⏳`
+        : `✅ *Ödeme Başarılı!*
 
 🎵 Sipariş No: ${orderId}
 💰 ${order.totalPrice} TL
 
-Şarkı sözleriniz yazılıyor... ⏳`
-      );
+Şarkı sözleriniz yazılıyor... ⏳`;
+
+      await this.whatsappService.sendTextMessage(order.whatsappPhone, statusMessage);
 
       const lyricsRequest = {
         songDetails: order.orderData.song1,
