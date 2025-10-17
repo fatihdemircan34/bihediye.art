@@ -334,6 +334,90 @@ ${userFeedback}
   }
 
   /**
+   * Format user-written lyrics to Suno AI format with proper tags
+   * Used when user writes their own complete lyrics (option 3)
+   */
+  async formatUserLyrics(userLyrics: string): Promise<LyricsGenerationResult> {
+    try {
+      const systemPrompt = `Sen profesyonel bir şarkı sözü formatçısısın. Kullanıcının yazdığı şarkı sözlerini Suno AI formatına çeviriyorsun.
+
+GÖREV:
+1. Kullanıcının yazdığı sözleri analiz et
+2. Şarkının yapısını belirle (giriş, kıtalar, nakarat, köprü, çıkış)
+3. Uygun Suno AI etiketlerini ekle: [intro], [verse], [pre-chorus], [chorus], [bridge], [outro], [instrumental break]
+4. Her satırın kısa ve şarkı söylenebilir olmasını sağla
+5. Sözlerin anlamını ve sırasını DEĞIŞTIRME, sadece format ekle
+6. İçerik denetiminden geçebilir olmasını sağla (temiz, pozitif)
+
+FORMAT KURALLARI:
+- Her bölüm MUTLAKA etiketle başlamalı
+- Satırlar kısa olmalı (maksimum 10-12 kelime)
+- Şarkı yapısı mantıklı olmalı
+- En az 2 dakikalık şarkı için yeterli uzunlukta olmalı
+
+Sadece formatlanmış şarkı sözlerini döndür, başka açıklama yapma.`;
+
+      const requestBody: any = {
+        model: this.model,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: `Aşağıdaki şarkı sözlerini Suno AI formatına çevir:
+
+${userLyrics}`,
+          },
+        ],
+        max_completion_tokens: 2000,
+      };
+
+      if (!this.model.includes('gpt-5')) {
+        requestBody.temperature = 0.5;
+      }
+
+      console.log('📝 Formatting user-written lyrics to Suno AI format...');
+
+      const response = await this.client.post('/chat/completions', requestBody);
+
+      // Track token usage
+      const tokenUsage = response.data.usage;
+      if (tokenUsage) {
+        console.log('📊 OpenAI Token Usage (Format User Lyrics):', {
+          promptTokens: tokenUsage.prompt_tokens,
+          completionTokens: tokenUsage.completion_tokens,
+          totalTokens: tokenUsage.total_tokens,
+        });
+      }
+
+      const formattedLyrics = response.data.choices[0]?.message?.content?.trim();
+
+      if (!formattedLyrics) {
+        throw new Error('OpenAI boş yanıt döndürdü');
+      }
+
+      console.log('✅ User lyrics formatted successfully');
+      console.log('- Original length:', userLyrics.length);
+      console.log('- Formatted length:', formattedLyrics.length);
+      console.log('- Has tags:', /\[verse\]|\[chorus\]|\[bridge\]/.test(formattedLyrics));
+
+      return {
+        lyrics: formattedLyrics,
+        tokenUsage: tokenUsage ? {
+          promptTokens: tokenUsage.prompt_tokens,
+          completionTokens: tokenUsage.completion_tokens,
+          totalTokens: tokenUsage.total_tokens,
+        } : undefined,
+      };
+    } catch (error: any) {
+      console.error('❌ Error formatting user lyrics:', error.response?.data || error.message);
+      throw new Error(`Şarkı sözü formatlama hatası: ${error.response?.data?.error?.message || error.message}`);
+    }
+  }
+
+  /**
    * Generate a short prompt for video generation
    */
   async generateVideoPrompt(story: string, songType: string): Promise<string> {

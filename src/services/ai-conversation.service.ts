@@ -539,10 +539,10 @@ JSON formatında cevap ver:
   }
 
   /**
-   * Parse lyrics review response (approve, revise, or reject)
+   * Parse lyrics review response (approve, revise, or write_own)
    */
   async parseLyricsReview(userMessage: string): Promise<{
-    action: 'approve' | 'revise' | null;
+    action: 'approve' | 'revise' | 'write_own' | null;
     revisionRequest?: string;
     response: string;
   }> {
@@ -552,6 +552,8 @@ JSON formatında cevap ver:
     const approveWords = ['onayla', 'onaylıyorum', 'tamam', 'evet', 'güzel', 'süper', 'harika', '1'];
     // Revize kelimeleri
     const reviseWords = ['revize', 'düzelt', 'değiştir', 'revize et', 'düzeltme', '2'];
+    // Komple yazma kelimeleri
+    const writeOwnWords = ['komple', 'ben yazacağım', 'kendim yazacağım', 'kendi sözlerim', '3'];
 
     if (approveWords.some(word => message.includes(word))) {
       return {
@@ -560,18 +562,48 @@ JSON formatında cevap ver:
       };
     }
 
+    if (writeOwnWords.some(word => message.includes(word))) {
+      return {
+        action: 'write_own',
+        response: `📝 *Harika! Kendi sözlerinizi yazabilirsiniz.*
+
+*Suno AI Formatı (Başlıkları kullanın):*
+
+**[Intro]** - Giriş müziği (enstrümantal)
+**[Verse]** - Kıta (hikayeyi anlatır)
+**[Pre-Chorus]** - Nakarat öncesi geçiş
+**[Chorus]** - Nakarat (akılda kalıcı kısım)
+**[Bridge]** - Köprü (farklı melodi/duygu)
+**[Instrumental Break]** - Enstrümantal ara
+**[Outro]** - Bitiş
+
+**Örnek Sıralama:**
+[Intro]
+[Verse]
+[Pre-Chorus]
+[Chorus]
+[Verse]
+[Chorus]
+[Bridge]
+[Chorus]
+[Outro]
+
+Şimdi sözlerinizi bu formatta yazıp gönderin! 🎵`,
+      };
+    }
+
     if (reviseWords.some(word => message.includes(word)) || message.length > 15) {
       // Uzun mesaj = revizyon talebi
       return {
         action: 'revise',
         revisionRequest: userMessage,
-        response: '✏️ Anlad ım! Şarkı sözlerini düzenliyoruz...',
+        response: '✏️ Anladım! Şarkı sözlerini düzenliyoruz...',
       };
     }
 
     return {
       action: null,
-      response: '❓ Şarkı sözlerini onaylıyor musunuz yoksa değişiklik mi istiyorsunuz?\n\n1️⃣ Onayla\n2️⃣ Değişiklik İstiyorum (ne değiştirmek istediğinizi yazın)',
+      response: '❓ Şarkı sözlerini onaylıyor musunuz yoksa değişiklik mi istiyorsunuz?\n\n1️⃣ Onayla\n2️⃣ Değişiklik İstiyorum\n3️⃣ Komple Ben Yazacağım',
     };
   }
 

@@ -33,6 +33,7 @@ export interface ConversationState {
   retryCount?: number;  // Track failed parse attempts per step
   lastMessage?: string; // Track last user message to detect duplicates
   duplicateCount?: number; // Count duplicate messages
+  waitingForCustomLyrics?: boolean; // User chose to write their own lyrics
 }
 
 export class OrderService {
@@ -497,6 +498,71 @@ Yine de devam etmek ister misiniz?
         break;
 
       case 'lyrics_review_song1':
+        // Check if we're waiting for custom lyrics from user
+        if (conversation.waitingForCustomLyrics) {
+          const orders = await this.firebaseService.getOrdersByPhone(from);
+          const pendingOrder = orders.find(o => o.status === 'lyrics_generating' || o.status === 'paid');
+
+          if (pendingOrder) {
+            // Check if user wrote lyrics with Suno AI format headers
+            const hasSunoFormat = /\[(Intro|Verse|Chorus|Bridge|Pre-Chorus|Outro|Instrumental Break)\]/i.test(message);
+
+            let finalLyrics = message;
+
+            if (!hasSunoFormat) {
+              // User didn't use format - let OpenAI format it
+              await this.whatsappService.sendTextMessage(from, '⏳ Sözlerinizi Suno AI formatına çeviriyoruz...');
+
+              try {
+                const formatResult = await this.openaiService.formatUserLyrics(message);
+                finalLyrics = formatResult.lyrics;
+
+                // Log token usage
+                if (formatResult.tokenUsage) {
+                  await this.firebaseService.logAnalytics('openai_token_usage', {
+                    orderId: pendingOrder.id,
+                    phone: pendingOrder.whatsappPhone,
+                    operation: 'format_user_lyrics',
+                    promptTokens: formatResult.tokenUsage.promptTokens,
+                    completionTokens: formatResult.tokenUsage.completionTokens,
+                    totalTokens: formatResult.tokenUsage.totalTokens,
+                    timestamp: new Date().toISOString(),
+                  });
+                }
+              } catch (error: any) {
+                console.error('Error formatting user lyrics:', error);
+                await this.whatsappService.sendTextMessage(
+                  from,
+                  `❌ Sözlerinizi formatlarken hata oluştu: ${error.message}\n\nLütfen tekrar deneyin veya başka sözler gönderin.`
+                );
+                return;
+              }
+            }
+
+            // Update order with custom lyrics
+            await this.firebaseService.updateOrder(pendingOrder.id, {
+              song1Lyrics: finalLyrics,
+            });
+
+            // Send confirmation and start music generation
+            await this.whatsappService.sendTextMessage(
+              from,
+              `✅ *Şarkı Sözleri Alındı!*
+
+${finalLyrics}
+
+---
+
+Müzik üretimine başlıyoruz! 🎵`
+            );
+
+            conversation.waitingForCustomLyrics = false;
+            await this.firebaseService.deleteConversation(from);
+            await this.startMusicGeneration(pendingOrder.id);
+          }
+          return;
+        }
+
         // User is reviewing lyrics after payment
         const reviewResult = await this.aiConversationService.parseLyricsReview(message);
 
@@ -598,12 +664,19 @@ ${revisionResult.lyrics}
 Ne yapmak istersiniz?
 1️⃣ Onayla (Müzik üretimine geç)
 2️⃣ ${remainingRevisions > 0 ? 'Tekrar Revize Et' : 'Revizyon hakkınız bitti'}
+3️⃣ Komple Ben Yazacağım (Suno AI formatında kendi sözlerinizi gönderin)
 
 ---
 💡 Destek: destek@bihediye.art`
               );
             }
           }
+        } else if (reviewResult.action === 'write_own') {
+          // User wants to write their own lyrics
+          await this.whatsappService.sendTextMessage(from, reviewResult.response);
+          conversation.waitingForCustomLyrics = true;
+          await this.firebaseService.saveConversation(conversation);
+          return;
         }
         break;
 
@@ -1147,6 +1220,7 @@ ${lyricsResult.lyrics}
 Ne yapmak istersiniz?
 1️⃣ Onayla (Müzik üretimine geç)
 2️⃣ Revizyon İstiyorum (Değiştirmek istediğiniz kısmı yazın)
+3️⃣ Komple Ben Yazacağım (Suno AI formatında kendi sözlerinizi gönderin)
 
 ---
 💡 Destek: destek@bihediye.art`
